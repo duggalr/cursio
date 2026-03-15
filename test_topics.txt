@@ -1,0 +1,54 @@
+# Test Topics for AI Educational Video Generator
+# Format: DURATION | TOPIC | NOTES
+# Run with: .venv/bin/python generate.py "TOPIC" --duration DURATION --preview --no-voice
+
+public key cryptography
+
+# ─── MATH (classic 3B1B territory) ────────────────────────────────
+
+short  | Explain the derivative                          | baseline test, should work well
+short  | Why 0.999... equals 1                           | short punchy proof, good for testing hooks
+medium | What makes Euler's number e so special          | needs multiple examples, good depth test
+medium | How matrix multiplication actually works        | visual grids + transformations
+
+# ─── COMPUTER SCIENCE ─────────────────────────────────────────────
+
+short  | How binary search works                         | simple boxes + arrows, step-by-step
+short  | What is Big O notation                          | graphs comparing growth rates
+medium | The 7 layers of the OSI model                   | layered diagrams, data flow — tests non-math visuals
+medium | How hash tables work                            | boxes, arrows, collision handling
+
+# ─── ENGINEERING / SYSTEMS ────────────────────────────────────────
+
+short  | What is GPU InfiniBand partitioning             | niche topic, tests if it can explain anything
+medium | How DNS actually works                          | packet flow diagrams, recursive lookups
+medium | How HTTPS keeps your data safe                  | key exchange diagrams, encryption flow
+
+# ─── ECONOMICS / POLICY ──────────────────────────────────────────
+
+short  | How tariffs actually work                       | bar charts, money flow arrows — tests non-STEM
+medium | Why inflation happens                           | supply/demand curves, money supply visuals
+medium | How compound interest builds wealth             | exponential growth curves, before/after
+
+# ─── PHYSICS ──────────────────────────────────────────────────────
+
+short  | Why is the sky blue                             | wave diagrams, scattering
+medium | How gravity bends light                         | spacetime diagrams, light paths curving
+
+# ─── HISTORY / CONCEPTS ──────────────────────────────────────────
+
+short  | What was the Turing machine                     | tape + head diagram, state transitions
+medium | How the internet was invented                   | timeline, network diagrams, packet switching
+
+# ─── LONG FORMAT (deep dives) ────────────────────────────────────
+
+long   | The beauty of Fourier transforms                | full 3B1B-style deep dive, circles + frequencies
+long   | How neural networks learn                       | layers, weights, backpropagation visualization
+
+# ─── RECOMMENDED TEST ORDER ──────────────────────────────────────
+# 1. "Explain the derivative" --duration short          (baseline, known good topic)
+# 2. "How binary search works" --duration short         (CS topic, tests boxes/arrows)
+# 3. "How tariffs actually work" --duration short       (non-STEM, tests adaptability)
+# 4. "The 7 layers of the OSI model" --duration medium  (medium length, layered diagrams)
+# 5. "What makes Euler's number e so special" --duration medium  (math depth test)
+# 6. "How neural networks learn" --duration long        (long format stress test)
