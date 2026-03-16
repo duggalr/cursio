@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Youtube, Twitter } from "lucide-react";
+import { Youtube } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import AuthModal from "./AuthModal";
@@ -130,6 +130,12 @@ export default function Navbar() {
           </Link>
 
           <div className="flex items-center gap-4">
+            <Link
+              href="/about"
+              className="text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-foreground)]"
+            >
+              About
+            </Link>
             <a
               href="https://youtube.com"
               target="_blank"
@@ -144,7 +150,19 @@ export default function Navbar() {
               rel="noopener noreferrer"
               className="text-[var(--color-muted)] transition-colors hover:text-[var(--color-foreground)]"
             >
-              <Twitter size={16} />
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </a>
+            <a
+              href="https://tiktok.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--color-muted)] transition-colors hover:text-[var(--color-foreground)]"
+            >
+              <svg viewBox="0 0 448 512" fill="currentColor" className="h-4 w-4">
+                <path d="M448 209.9a210.1 210.1 0 01-122.8-39.3v178.8A162.6 162.6 0 11185 188.3v89.9a74.6 74.6 0 1052.2 71.2V0h88a121 121 0 00122.8 121.3z" />
+              </svg>
             </a>
 
             <div className="mx-1 h-4 w-px bg-[var(--color-border)]" />

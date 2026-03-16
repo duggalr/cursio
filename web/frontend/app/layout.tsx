@@ -30,7 +30,10 @@ export default function RootLayout({
           <div className="mx-auto max-w-6xl px-6">
             <div className="flex items-center justify-between text-xs text-[var(--color-muted)]">
               <span style={{ fontFamily: "var(--font-serif)" }}>Curiso</span>
-              <a href="#" className="transition-colors hover:text-[var(--color-foreground)]">Contact</a>
+              <div className="flex gap-4">
+                <a href="/about" className="transition-colors hover:text-[var(--color-foreground)]">About</a>
+                <a href="#" className="transition-colors hover:text-[var(--color-foreground)]">Contact</a>
+              </div>
             </div>
           </div>
         </footer>
