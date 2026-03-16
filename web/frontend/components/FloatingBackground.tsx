@@ -96,7 +96,7 @@ const floatingIcons = [
       </svg>
     ),
     size: 54,
-    position: { top: "12%", left: "48%" },
+    position: { top: "75%", left: "48%" },
     duration: 25,
     delay: 6,
   },
@@ -120,7 +120,7 @@ export default function FloatingBackground() {
       {floatingIcons.map((icon, i) => (
         <motion.div
           key={i}
-          className="absolute text-[var(--color-border)]"
+          className="absolute text-[var(--color-muted)]"
           style={{
             ...icon.position,
             width: icon.size,
@@ -128,9 +128,10 @@ export default function FloatingBackground() {
             opacity: 0,
           }}
           animate={{
-            y: [0, -14, 0, 10, 0],
-            rotate: [0, 4, -3, 2, 0],
-            opacity: [0.45, 0.65, 0.45, 0.55, 0.45],
+            x: [0, 8, -6, 10, -4, 0],
+            y: [0, -18, 6, -10, 14, 0],
+            rotate: [0, 5, -4, 3, -2, 0],
+            opacity: [0.22, 0.3, 0.25, 0.33, 0.27, 0.22],
           }}
           transition={{
             duration: icon.duration,

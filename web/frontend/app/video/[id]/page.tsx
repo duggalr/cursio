@@ -121,6 +121,10 @@ export default function VideoPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
+      <Link href="/" className="mb-4 inline-flex items-center text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
+        &larr; Back to gallery
+      </Link>
+
       {/* Video Player */}
       <motion.div
         className="overflow-hidden rounded-lg bg-black"
@@ -219,11 +223,6 @@ export default function VideoPage() {
           </div>
         )}
 
-        <div className="mt-8">
-          <Link href="/" className="text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)]">
-            &larr; Back to gallery
-          </Link>
-        </div>
       </motion.div>
 
       <AuthModal isOpen={authModal} onClose={() => setAuthModal(false)} />

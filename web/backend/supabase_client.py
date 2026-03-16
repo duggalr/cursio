@@ -47,11 +47,20 @@ def get_user_from_token(token: str) -> dict:
         payload = jwt.decode(
             token,
             jwt_secret,
-            algorithms=["HS256"],
+            algorithms=["HS256", "RS256"],
             audience="authenticated",
         )
-    except jwt.PyJWTError as exc:
-        raise ValueError(f"Invalid or expired token: {exc}") from exc
+    except jwt.PyJWTError:
+        # Fallback: let Supabase verify the token directly
+        supabase = get_supabase()
+        user_response = supabase.auth.get_user(token)
+        if user_response is None or user_response.user is None:
+            raise ValueError("Invalid or expired token")
+        user = user_response.user
+        return {
+            "sub": user.id,
+            "email": user.email,
+        }
 
     return {
         "sub": payload.get("sub"),

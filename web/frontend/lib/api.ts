@@ -107,6 +107,15 @@ export async function unlikeVideo(videoId: string, token: string): Promise<void>
   }
 }
 
+export async function fetchActiveJob(token: string): Promise<Job | null> {
+  const res = await fetch(`${API_URL}/api/jobs/active/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data || null;
+}
+
 export async function checkIfLiked(videoId: string, token: string): Promise<boolean> {
   const res = await fetch(`${API_URL}/api/videos/${videoId}/like`, {
     headers: { Authorization: `Bearer ${token}` },

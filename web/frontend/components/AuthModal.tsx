@@ -99,12 +99,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = "signin" }: A
         </button>
 
         <h2 className="mb-1 text-lg font-medium text-[var(--color-foreground)]">
-          {mode === "signin" ? "Welcome back" : "Create an account"}
+          {mode === "signin" ? "Welcome back" : "Create a free account"}
         </h2>
         <p className="mb-5 text-sm text-[var(--color-muted)]">
           {mode === "signin"
             ? "Sign in to generate videos."
-            : "Join Lumira to start generating."}
+            : "100% free to create an account and generate videos."}
         </p>
 
         <button

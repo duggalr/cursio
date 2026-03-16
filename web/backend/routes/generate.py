@@ -3,7 +3,7 @@ Video generation endpoint — validates auth, enforces rate limits,
 creates a job, and kicks off the background pipeline.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
 
@@ -13,7 +13,7 @@ from web.backend.worker import run_pipeline
 
 router = APIRouter(prefix="/api", tags=["generate"])
 
-DAILY_RATE_LIMIT = 5
+MONTHLY_RATE_LIMIT = 8
 
 
 def _extract_token(authorization: str) -> str:
@@ -44,20 +44,21 @@ async def generate_video(
     user_id: str = user["sub"]
     supabase = get_supabase()
 
-    # --- Rate limit: max N jobs in the last 24 hours ---
-    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    # --- Rate limit: max N jobs per calendar month ---
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
     recent_jobs = (
         supabase.table("generation_jobs")
         .select("id", count="exact")
         .eq("user_id", user_id)
-        .gte("created_at", since)
+        .gte("created_at", month_start)
         .execute()
     )
     job_count = recent_jobs.count if recent_jobs.count is not None else len(recent_jobs.data)
-    if job_count >= DAILY_RATE_LIMIT:
+    if job_count >= MONTHLY_RATE_LIMIT:
         raise HTTPException(
             status_code=429,
-            detail=f"Rate limit exceeded — maximum {DAILY_RATE_LIMIT} videos per day",
+            detail=f"Rate limit exceeded — maximum {MONTHLY_RATE_LIMIT} free videos per month",
         )
 
     # --- Create job row ---

@@ -5,8 +5,16 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import VideoCard from "@/components/VideoCard";
 import AuthModal from "@/components/AuthModal";
-import { fetchVideos, fetchJobStatus, generateVideo, type Video } from "@/lib/api";
+import { fetchVideos, fetchJobStatus, fetchActiveJob, generateVideo, type Video } from "@/lib/api";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
+
+const suggestedTopics = [
+  { label: "How gravity works", prompt: "Explain how gravity works — from Newton's apple to Einstein's curved spacetime" },
+  { label: "Why the sky is blue", prompt: "Why is the sky blue? Explain Rayleigh scattering and how light interacts with the atmosphere" },
+  { label: "How neural networks learn", prompt: "How do neural networks learn? Walk through forward propagation, loss functions, and backpropagation" },
+  { label: "The Fibonacci sequence", prompt: "What is the Fibonacci sequence, where does it appear in nature, and why is it connected to the golden ratio?" },
+  { label: "How encryption works", prompt: "How does public-key encryption work? Explain RSA and why it keeps our data safe" },
+];
 
 const steps = [
   { key: "planning", label: "Planning scenes" },
@@ -22,6 +30,7 @@ function getStepIndex(status: string): number {
 }
 
 export default function HomePage() {
+  const [mounted, setMounted] = useState(false);
   const [videos, setVideos] = useState<Video[]>([]);
   const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,6 +41,7 @@ export default function HomePage() {
   // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [authModal, setAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const supabaseRef = useRef<SupabaseClient | null>(null);
 
   // Generate state
@@ -40,12 +50,33 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
-  // Job progress (inline)
+  // Job progress (inline) — restore from localStorage on mount
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const [jobVideoId, setJobVideoId] = useState<string | null>(null);
   const [jobError, setJobError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Track mount to prevent SSR → hydration animation flash
+  useEffect(() => { setMounted(true); }, []);
+
+  // Restore active job from backend on login
+  useEffect(() => {
+    if (!user || !supabaseRef.current) return;
+    (async () => {
+      try {
+        const { data: { session } } = await supabaseRef.current!.auth.getSession();
+        if (!session?.access_token) return;
+        const job = await fetchActiveJob(session.access_token);
+        if (job && job.status !== "complete" && job.status !== "failed") {
+          setActiveJobId(job.id);
+          setJobStatus(job.status);
+        }
+      } catch {
+        // ignore — no active job
+      }
+    })();
+  }, [user]);
 
   // Init auth
   useEffect(() => {
@@ -112,10 +143,12 @@ export default function HomePage() {
         setJobStatus(data.status);
         if (data.status === "complete") {
           setJobVideoId(data.video_id);
+          localStorage.removeItem("curiso_active_job");
           if (pollRef.current) clearInterval(pollRef.current);
           loadVideos(false);
         } else if (data.status === "failed") {
           setJobError(data.error || "Generation failed");
+          localStorage.removeItem("curiso_active_job");
           if (pollRef.current) clearInterval(pollRef.current);
         }
       } catch {
@@ -132,6 +165,7 @@ export default function HomePage() {
     if (!topic.trim()) return;
 
     if (!user) {
+      setAuthMode("signup");
       setAuthModal(true);
       return;
     }
@@ -150,6 +184,7 @@ export default function HomePage() {
         return;
       }
       const { job_id } = await generateVideo(topic, duration, session.access_token);
+      localStorage.setItem("curiso_active_job", job_id);
       setActiveJobId(job_id);
       setJobStatus("planning");
       setTopic("");
@@ -169,30 +204,30 @@ export default function HomePage() {
         <motion.div
           className="mb-8"
           initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <div className="mb-5 flex items-baseline gap-3">
+          <div className="mb-5">
             <h1
               className="text-2xl text-[var(--color-foreground)]"
               style={{ fontFamily: "var(--font-serif)" }}
             >
               Learn anything.
             </h1>
-            <motion.span
-              className="text-sm text-[var(--color-muted)]"
+            <motion.p
+              className="mt-1.5 text-sm text-[var(--color-muted)]"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              animate={mounted ? { opacity: 1 } : { opacity: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
-              Understand anything visually.
-            </motion.span>
+              Enter a topic you're curious about, pick a video length, and let AI generate an animated explanation for you.
+            </motion.p>
           </div>
 
           <motion.form
             onSubmit={handleGenerate}
             initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
             transition={{ delay: 0.15, duration: 0.5, ease: "easeOut" }}
           >
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow focus-within:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
@@ -203,6 +238,20 @@ export default function HomePage() {
                 rows={2}
                 className="w-full resize-none bg-transparent text-sm text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none"
               />
+              {!topic.trim() && (
+                <div className="flex flex-wrap gap-1.5 pt-1 pb-2">
+                  {suggestedTopics.map((s) => (
+                    <button
+                      key={s.label}
+                      type="button"
+                      onClick={() => setTopic(s.prompt)}
+                      className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex items-center justify-between pt-2">
                 <div className="flex gap-1">
                   {["short", "medium", "long"].map((d) => (
@@ -278,6 +327,9 @@ export default function HomePage() {
                     />
                   ))}
                 </div>
+                <p className="mt-2.5 text-[11px] text-[var(--color-muted)]">
+                  This usually takes around 5 minutes. You can refresh or leave this page — we'll notify you when it's ready.
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -303,7 +355,7 @@ export default function HomePage() {
                   Watch now
                 </Link>
                 <button
-                  onClick={() => { setActiveJobId(null); setJobStatus(null); setJobVideoId(null); }}
+                  onClick={() => { setActiveJobId(null); setJobStatus(null); setJobVideoId(null); localStorage.removeItem("curiso_active_job"); }}
                   className="text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                 >
                   Dismiss
@@ -323,7 +375,7 @@ export default function HomePage() {
               >
                 <span className="text-sm text-red-700">Generation failed.</span>
                 <button
-                  onClick={() => { setActiveJobId(null); setJobStatus(null); setJobError(null); }}
+                  onClick={() => { setActiveJobId(null); setJobStatus(null); setJobError(null); localStorage.removeItem("curiso_active_job"); }}
                   className="ml-auto text-xs text-red-600 underline"
                 >
                   Dismiss
@@ -333,13 +385,17 @@ export default function HomePage() {
           </AnimatePresence>
         </motion.div>
 
-        {/* Sort + Search controls */}
+        {/* Gallery header + Sort + Search controls */}
         <motion.div
-          className="mb-5 flex items-center justify-between"
+          className="mb-5"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          animate={mounted ? { opacity: 1 } : { opacity: 0 }}
           transition={{ delay: 0.3, duration: 0.4 }}
         >
+          <p className="mb-3 text-xs text-[var(--color-muted)]">
+            Explore videos others have generated below.
+          </p>
+          <div className="flex items-center justify-between">
           <div className="flex gap-4 text-sm">
             <button
               onClick={() => setSort("recent")}
@@ -369,6 +425,7 @@ export default function HomePage() {
             placeholder="Search..."
             className="w-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
           />
+          </div>
         </motion.div>
 
         {/* Video Grid */}
@@ -417,8 +474,9 @@ export default function HomePage() {
                 {videos.map((video, i) => (
                   <motion.div
                     key={video.id}
+                    className="h-full"
                     initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
                     transition={{ delay: 0.1 + i * 0.06, duration: 0.4, ease: "easeOut" }}
                   >
                     <VideoCard video={video} />
@@ -430,7 +488,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <AuthModal isOpen={authModal} onClose={() => setAuthModal(false)} />
+      <AuthModal isOpen={authModal} onClose={() => setAuthModal(false)} initialMode={authMode} />
     </>
   );
 }

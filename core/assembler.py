@@ -91,33 +91,36 @@ def burn_subtitles(video_path: Path, srt_path: Path, output_path: Path) -> Path:
     Returns:
         Path to the final video with subtitles.
     """
-    # Style: smaller text pinned to very bottom with dark background box
-    # MarginV=10 pushes it to the bottom edge, BorderStyle=4 adds a
-    # semi-transparent background box so it never obscures the animations
-    subtitle_filter = (
-        f"subtitles={str(srt_path)}:force_style='"
-        f"FontName=Source Sans Pro,"
-        f"FontSize=16,"
-        f"PrimaryColour=&H00FFFFFF,"
-        f"OutlineColour=&H00000000,"
-        f"BackColour=&H80000000,"
-        f"BorderStyle=4,"
-        f"Outline=1,"
-        f"Shadow=0,"
-        f"MarginV=10,"
-        f"Alignment=2"
-        f"'"
-    )
+    # Copy SRT to a simple filename to avoid FFmpeg path escaping issues
+    import shutil
+    safe_srt = srt_path.parent / "subs.srt"
+    shutil.copy2(srt_path, safe_srt)
 
-    _run_ffmpeg([
+    # Build the filter command as a single string passed to ffmpeg_filter
+    # Using -filter_complex with the subtitles filter to avoid escaping issues
+    cmd = [
         "-i", str(video_path),
-        "-vf", subtitle_filter,
         "-c:v", "libx264", "-preset", "fast", "-crf", "18",
         "-c:a", "copy",
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
         str(output_path),
-    ])
+    ]
+    # Insert the subtitles filter via shell to handle quoting correctly
+    full_cmd = (
+        f'ffmpeg -y -hide_banner -loglevel error '
+        f'-i "{video_path}" '
+        f"-vf \"subtitles=subs.srt:force_style='FontSize=16,PrimaryColour=&H00FFFFFF,"
+        f"OutlineColour=&H00000000,BackColour=&H80000000,"
+        f"BorderStyle=4,Outline=1,Shadow=0,MarginV=10,Alignment=2'\" "
+        f'-c:v libx264 -preset fast -crf 18 '
+        f'-c:a copy -pix_fmt yuv420p -movflags +faststart '
+        f'"{output_path}"'
+    )
+    result = subprocess.run(full_cmd, shell=True, capture_output=True, text=True, cwd=srt_path.parent)
+    if result.returncode != 0:
+        print(f"FFmpeg error: {result.stderr}", file=sys.stderr)
+        raise RuntimeError(f"FFmpeg failed: {result.stderr[:500]}")
 
     return output_path
 
@@ -164,10 +167,10 @@ def generate_thumbnail(video_path: Path, output_path: Path, timestamp: float = 5
     return output_path
 
 
-def _run_ffmpeg(args: list[str]):
+def _run_ffmpeg(args: list[str], cwd: Path | None = None):
     """Run an ffmpeg command, exit on failure."""
     cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error"] + args
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
     if result.returncode != 0:
         print(f"FFmpeg error: {result.stderr}", file=sys.stderr)
         raise RuntimeError(f"FFmpeg failed: {result.stderr[:500]}")

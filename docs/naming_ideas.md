@@ -35,4 +35,4 @@
 | MindReel | Mind + reel |
 
 ## Decision
-**Lumira** — chosen for its warm, illuminating quality that fits the educational + minimalist aesthetic. Tagline: "Understand anything visually."
+**Curiso** — chosen name. Domain: curiso.app. Evokes "curious" — fits the educational explorer aesthetic. Tagline: "Understand anything visually."

@@ -18,8 +18,7 @@ from core.planner import plan_scenes  # noqa: E402
 from core.codegen import generate_manim_code  # noqa: E402
 from core.renderer import render_scene, get_scene_names  # noqa: E402
 from core.voice import generate_voice, get_audio_duration  # noqa: E402
-from core.subtitles import generate_subtitles  # noqa: E402
-from core.assembler import combine_scene, concatenate_scenes, burn_subtitles, generate_thumbnail  # noqa: E402
+from core.assembler import combine_scene, concatenate_scenes, generate_thumbnail  # noqa: E402
 
 from web.backend.supabase_client import get_supabase  # noqa: E402
 
@@ -140,11 +139,7 @@ def run_pipeline(job_id: str) -> None:
             audio_files.append(audio_path)
             durations.append(dur)
 
-        # ── Stage 5: Subtitles ───────────────────────────────────────
-        srt_path = out_dir / "subtitles.srt"
-        generate_subtitles(successful_scenes, durations, srt_path)
-
-        # ── Stage 6: Assembly ────────────────────────────────────────
+        # ── Stage 5: Assembly ────────────────────────────────────────
         _update_job(
             job_id,
             status="assembling",
@@ -163,14 +158,11 @@ def run_pipeline(job_id: str) -> None:
             combine_scene(video, audio, combined_path)
             combined_scenes.append(combined_path)
 
-        no_subs = out_dir / "no_subtitles.mp4"
-        if len(combined_scenes) == 1:
-            combined_scenes[0].rename(no_subs)
-        else:
-            concatenate_scenes(combined_scenes, no_subs)
-
         final_path = out_dir / "final.mp4"
-        burn_subtitles(no_subs, srt_path, final_path)
+        if len(combined_scenes) == 1:
+            combined_scenes[0].rename(final_path)
+        else:
+            concatenate_scenes(combined_scenes, final_path)
 
         # ── Generate thumbnail ──────────────────────────────────────
         thumbnail_path = out_dir / "thumbnail.jpg"

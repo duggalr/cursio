@@ -10,7 +10,7 @@ interface VideoCardProps {
 export default function VideoCard({ video }: VideoCardProps) {
   return (
     <Link href={`/video/${video.id}`}>
-      <article className="group flex flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] transition-shadow hover:shadow-sm">
+      <article className="group flex h-full flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] transition-shadow hover:shadow-sm">
         <div className="relative aspect-video w-full overflow-hidden">
           {video.thumbnail_url ? (
             <img
