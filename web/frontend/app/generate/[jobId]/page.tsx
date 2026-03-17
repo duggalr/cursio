@@ -11,7 +11,7 @@ const steps = [
   { key: "rendering", label: "Rendering", description: "Creating visual animations" },
   { key: "voiceover", label: "Voiceover", description: "Generating narration audio" },
   { key: "assembling", label: "Assembling", description: "Combining video and audio" },
-  { key: "complete", label: "Complete", description: "Your video is ready" },
+  { key: "completed", label: "Complete", description: "Your video is ready" },
 ];
 
 function getStepIndex(status: string): number {
@@ -32,7 +32,7 @@ export default function JobProgressPage() {
       const data = await fetchJobStatus(jobId);
       setJob(data);
 
-      if (data.status === "complete" || data.status === "failed") {
+      if (data.status === "completed" || data.status === "failed") {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
@@ -60,14 +60,14 @@ export default function JobProgressPage() {
           className="mb-2 text-2xl text-[var(--color-foreground)]"
           style={{ fontFamily: "var(--font-serif)" }}
         >
-          {job?.status === "complete"
+          {job?.status === "completed"
             ? "Video Ready"
             : job?.status === "failed"
               ? "Generation Failed"
               : "Creating Your Video"}
         </h1>
         <p className="text-sm text-[var(--color-muted)]">
-          {job?.status === "complete"
+          {job?.status === "completed"
             ? "Your educational video has been generated."
             : job?.status === "failed"
               ? "Something went wrong during generation."
@@ -154,7 +154,7 @@ export default function JobProgressPage() {
         </div>
       </div>
 
-      {job?.status === "complete" && job.video_id && (
+      {job?.status === "completed" && job.video_id && (
         <div className="text-center">
           <Link
             href={`/video/${job.video_id}`}
