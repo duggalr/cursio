@@ -5,6 +5,8 @@ for render failures.
 
 import subprocess
 import re
+import shutil
+import sys
 from pathlib import Path
 
 from .codegen import fix_manim_code
@@ -37,10 +39,11 @@ def render_scene(
         # Write current code to file
         code_path.write_text(current_code)
 
-        # Build manim command
+        # Build manim command — resolve manim binary from same environment
+        manim_bin = shutil.which("manim") or str(Path(sys.executable).parent / "manim")
         quality = "-ql" if preview else "-qm"  # low vs medium quality
         cmd = [
-            "manim", "render",
+            manim_bin, "render",
             quality,
             "--format", "mp4",
             "--media_dir", str(output_dir / "media"),
