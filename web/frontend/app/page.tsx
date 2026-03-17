@@ -335,7 +335,7 @@ export default function HomePage() {
                 </div>
                 <button
                   type="submit"
-                  disabled={submitting || !topic.trim()}
+                  disabled={submitting || !topic.trim() || (!!activeJobId && jobStatus !== "completed" && jobStatus !== "failed")}
                   className="rounded-lg bg-[var(--color-foreground)] px-4 py-1.5 text-xs font-medium text-[var(--color-background)] transition-opacity disabled:opacity-40"
                 >
                   {submitting ? "Starting..." : "Generate"}
