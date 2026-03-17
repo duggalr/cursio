@@ -20,5 +20,10 @@ media/
 # OS
 .DS_Store
 
+# Launch video rendered output
+launch_video/output/*
+!launch_video/output/.gitkeep
+
 # Tools
 .superpowers/
+.vercel
