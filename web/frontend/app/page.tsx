@@ -37,7 +37,8 @@ export default function HomePage() {
   const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<"recent" | "most_liked">("recent");
+  const [sort, setSort] = useState<"my_videos" | "recent" | "most_liked">("recent");
+  const [tabInitialized, setTabInitialized] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auth state
@@ -104,8 +105,44 @@ export default function HomePage() {
     return () => { subscription?.unsubscribe(); };
   }, []);
 
+  // Default to "My Videos" tab once auth is resolved
+  useEffect(() => {
+    if (tabInitialized) return;
+    if (user) {
+      setSort("my_videos");
+      setTabInitialized(true);
+    } else if (user === null && supabaseRef.current) {
+      // Auth resolved, user is not logged in
+      setTabInitialized(true);
+    }
+  }, [user, tabInitialized]);
+
   // Load videos
   const loadVideos = useCallback(async (isInitial = false) => {
+    if (sort === "my_videos") {
+      // Fetch user's videos from Supabase directly
+      if (!supabaseRef.current || !user) {
+        setVideos([]);
+        setInitialLoad(false);
+        return;
+      }
+      if (isInitial) setInitialLoad(true);
+      else setRefreshing(true);
+      try {
+        const { data } = await supabaseRef.current
+          .from("videos")
+          .select("id, title, topic, thumbnail_url, video_url, narration_text, created_at, duration_profile")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        setVideos((data || []).map((v: Record<string, unknown>) => ({ ...v, like_count: 0 } as Video)));
+      } catch {
+        setVideos([]);
+      } finally {
+        setInitialLoad(false);
+        setRefreshing(false);
+      }
+      return;
+    }
     if (isInitial) setInitialLoad(true);
     else setRefreshing(true);
     try {
@@ -117,7 +154,7 @@ export default function HomePage() {
       setInitialLoad(false);
       setRefreshing(false);
     }
-  }, [search, sort]);
+  }, [search, sort, user]);
 
   useEffect(() => {
     if (videos.length === 0 && !search) {
@@ -395,11 +432,20 @@ export default function HomePage() {
           animate={mounted ? { opacity: 1 } : { opacity: 0 }}
           transition={{ delay: 0.3, duration: 0.4 }}
         >
-          <p className="mb-3 text-xs text-[var(--color-muted)]">
-            Explore videos others have generated below.
-          </p>
           <div className="flex items-center justify-between">
           <div className="flex gap-4 text-sm">
+            {user && (
+              <button
+                onClick={() => setSort("my_videos")}
+                className={`transition-colors ${
+                  sort === "my_videos"
+                    ? "font-medium text-[var(--color-foreground)]"
+                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                }`}
+              >
+                My Videos
+              </button>
+            )}
             <button
               onClick={() => setSort("recent")}
               className={`transition-colors ${
@@ -422,12 +468,14 @@ export default function HomePage() {
             </button>
           </div>
 
-          <input
-            type="text"
-            onChange={(e) => handleSearchInput(e.target.value)}
-            placeholder="Search..."
-            className="w-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
-          />
+          {sort !== "my_videos" && (
+            <input
+              type="text"
+              onChange={(e) => handleSearchInput(e.target.value)}
+              placeholder="Search..."
+              className="w-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
+            />
+          )}
           </div>
         </motion.div>
 
@@ -468,9 +516,26 @@ export default function HomePage() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                <p className="text-sm text-[var(--color-muted)]">
-                  {search ? `No videos found for "${search}"` : "No videos yet. Generate one above!"}
-                </p>
+                {sort === "my_videos" ? (
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-[var(--color-foreground)]">
+                      You haven't generated any videos yet.
+                    </p>
+                    <p className="mb-5 text-xs text-[var(--color-muted)]">
+                      Enter a topic above and create your first video. It's free and takes about 5 minutes.
+                    </p>
+                    <button
+                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                      className="inline-block rounded-lg bg-[var(--color-foreground)] px-5 py-2 text-sm font-medium text-[var(--color-background)] transition-opacity hover:opacity-80"
+                    >
+                      Generate your first video
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--color-muted)]">
+                    {search ? `No videos found for "${search}"` : "No videos yet. Generate one above!"}
+                  </p>
+                )}
               </motion.div>
             ) : (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
