@@ -15,6 +15,7 @@ Usage:
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -26,8 +27,7 @@ from core.planner import plan_scenes
 from core.codegen import generate_manim_code
 from core.renderer import render_scene, get_scene_names
 from core.voice import generate_voice, get_audio_duration
-from core.subtitles import generate_subtitles
-from core.assembler import combine_scene, concatenate_scenes, burn_subtitles
+from core.assembler import combine_scene, concatenate_scenes
 
 
 OUTPUT_ROOT = Path(__file__).parent / "output"
@@ -119,11 +119,39 @@ def main():
         print(f"\n--scenes-only: stopping here. Edit {plan_path} and re-run with --from-plan")
         return
 
-    # ─── Step 2: Generate Manim code ────────────────────────────────
+    # ─── Step 2: Generate voiceover (audio-first for timing) ────────
+    if args.no_voice:
+        print("\n--no-voice: skipping voiceover, using estimated durations")
+        audio_files = []
+        durations = []
+        # Estimate durations from word count (~2.5 words/sec)
+        for scene in plan["scenes"]:
+            word_count = len(scene["narration"].split())
+            durations.append(word_count / 2.5)
+    else:
+        print(f"\n{'='*60}")
+        print(f"Step 2/6: Generating voiceover (audio-first)")
+        print(f"{'='*60}")
+
+        audio_files = []
+        durations = []
+        for i, scene in enumerate(plan["scenes"]):
+            audio_path = out_dir / f"scene_{i+1:02d}.mp3"
+            print(f"  Generating voice for scene {i+1}...")
+            generate_voice(scene["narration"], audio_path, voice_id=args.voice)
+            dur = get_audio_duration(audio_path)
+            audio_files.append(audio_path)
+            durations.append(dur)
+            print(f"  Audio: {audio_path} ({dur:.1f}s)")
+
+    # ─── Step 3: Generate Manim code (with exact durations) ──────────
     print(f"\n{'='*60}")
-    print(f"Step 2/6: Generating Manim code")
+    print(f"Step 3/6: Generating Manim code (targeting audio durations)")
     print(f"{'='*60}")
-    code = generate_manim_code(plan)
+    for i, dur in enumerate(durations):
+        print(f"  Scene {i+1}: {dur:.1f}s target")
+
+    code = generate_manim_code(plan, scene_durations=durations)
     code_path = out_dir / "scenes.py"
     code_path.write_text(code)
     print(f"Code saved to: {code_path}")
@@ -135,9 +163,9 @@ def main():
         print("ERROR: No Scene classes found in generated code.")
         sys.exit(1)
 
-    # ─── Step 3: Render each scene ──────────────────────────────────
+    # ─── Step 4: Render each scene ──────────────────────────────────
     print(f"\n{'='*60}")
-    print(f"Step 3/6: Rendering {len(scene_names)} scene(s)")
+    print(f"Step 4/6: Rendering {len(scene_names)} scene(s)")
     print(f"{'='*60}")
 
     rendered_videos = []
@@ -165,10 +193,19 @@ def main():
     # Save final code (may have been fixed by retry loop)
     code_path.write_text(current_code)
 
-    # ─── Step 4: Generate voiceover ─────────────────────────────────
+    # Print timing comparison
+    print(f"\n  Timing comparison (animation vs audio):")
+    for i, vid in enumerate(rendered_videos):
+        vid_dur = float(subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(vid)],
+            capture_output=True, text=True).stdout.strip())
+        target = durations[i] if i < len(durations) else 0
+        diff = vid_dur - target
+        print(f"  Scene {i+1}: animation={vid_dur:.1f}s, audio={target:.1f}s, diff={diff:+.1f}s")
+
     if args.no_voice:
-        print("\n--no-voice: skipping voiceover and subtitles")
-        # Just concatenate the silent videos
+        print("\n--no-voice: skipping assembly")
         if len(rendered_videos) == 1:
             final_path = out_dir / "final.mp4"
             rendered_videos[0].rename(final_path)
@@ -178,39 +215,13 @@ def main():
         print(f"\nFinal video: {final_path}")
         return
 
+    # ─── Step 5: Assemble final video ───────────────────────────────
     print(f"\n{'='*60}")
-    print(f"Step 4/6: Generating voiceover")
-    print(f"{'='*60}")
-
-    audio_files = []
-    durations = []
-    # Only process scenes that rendered successfully
-    successful_scenes = plan["scenes"][:len(rendered_videos)]
-
-    for i, scene in enumerate(successful_scenes):
-        audio_path = out_dir / f"scene_{i+1:02d}.mp3"
-        print(f"  Generating voice for scene {i+1}...")
-        generate_voice(scene["narration"], audio_path, voice_id=args.voice)
-        dur = get_audio_duration(audio_path)
-        audio_files.append(audio_path)
-        durations.append(dur)
-        print(f"  Audio: {audio_path} ({dur:.1f}s)")
-
-    # ─── Step 5: Generate subtitles ─────────────────────────────────
-    print(f"\n{'='*60}")
-    print(f"Step 5/6: Generating subtitles")
-    print(f"{'='*60}")
-
-    srt_path = out_dir / "subtitles.srt"
-    generate_subtitles(successful_scenes, durations, srt_path)
-    print(f"Subtitles: {srt_path}")
-
-    # ─── Step 6: Assemble final video ───────────────────────────────
-    print(f"\n{'='*60}")
-    print(f"Step 6/6: Assembling final video")
+    print(f"Step 5/6: Assembling final video")
     print(f"{'='*60}")
 
     # Combine each scene's video + audio
+    successful_scenes = plan["scenes"][:len(rendered_videos)]
     combined_scenes = []
     for i, (video, audio) in enumerate(zip(rendered_videos, audio_files)):
         combined_path = out_dir / f"combined_{i+1:02d}.mp4"
@@ -219,21 +230,12 @@ def main():
         combined_scenes.append(combined_path)
 
     # Concatenate all scenes
-    no_subs = out_dir / "no_subtitles.mp4"
+    final_path = out_dir / "final.mp4"
     if len(combined_scenes) == 1:
-        combined_scenes[0].rename(no_subs)
+        combined_scenes[0].rename(final_path)
     else:
         print("  Concatenating all scenes...")
-        concatenate_scenes(combined_scenes, no_subs)
-
-    # Burn in subtitles (or skip if --no-captions)
-    final_path = out_dir / "final.mp4"
-    if args.no_captions:
-        print("  --no-captions: skipping subtitle burn-in")
-        no_subs.rename(final_path)
-    else:
-        print("  Burning in subtitles...")
-        burn_subtitles(no_subs, srt_path, final_path)
+        concatenate_scenes(combined_scenes, final_path)
 
     # ─── Done ───────────────────────────────────────────────────────
     print(f"\n{'='*60}")

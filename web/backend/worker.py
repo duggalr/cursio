@@ -72,13 +72,34 @@ def run_pipeline(job_id: str) -> None:
 
         num_scenes = len(plan["scenes"])
 
-        # ── Stage 2: Code generation ─────────────────────────────────
+        # ── Stage 2: Voiceover (audio-first for timing) ──────────────
+        _update_job(
+            job_id,
+            status="voiceover",
+            progress_message="Generating voiceover audio...",
+        )
+
+        audio_files: list[Path] = []
+        durations: list[float] = []
+
+        for idx, scene in enumerate(plan["scenes"], start=1):
+            _update_job(
+                job_id,
+                progress_message=f"Generating voiceover for scene {idx} of {num_scenes}...",
+            )
+            audio_path = out_dir / f"scene_{idx:02d}.mp3"
+            generate_voice(scene["narration"], audio_path)
+            dur = get_audio_duration(audio_path)
+            audio_files.append(audio_path)
+            durations.append(dur)
+
+        # ── Stage 3: Code generation (with exact audio durations) ───
         _update_job(
             job_id,
             status="generating",
             progress_message=f"Generating animation code for {num_scenes} scenes...",
         )
-        code = generate_manim_code(plan)
+        code = generate_manim_code(plan, scene_durations=durations)
         code_path = out_dir / "scenes.py"
         code_path.write_text(code)
 
@@ -86,7 +107,7 @@ def run_pipeline(job_id: str) -> None:
         if not scene_names:
             raise RuntimeError("No Scene classes found in generated code")
 
-        # ── Stage 3: Rendering ───────────────────────────────────────
+        # ── Stage 4: Rendering ──────────────────────────────────────
         _update_job(
             job_id,
             status="rendering",
@@ -116,28 +137,6 @@ def run_pipeline(job_id: str) -> None:
 
         # Save final (possibly patched) code
         code_path.write_text(current_code)
-
-        # ── Stage 4: Voiceover ───────────────────────────────────────
-        _update_job(
-            job_id,
-            status="voiceover",
-            progress_message="Generating voiceover audio...",
-        )
-
-        audio_files: list[Path] = []
-        durations: list[float] = []
-        successful_scenes = plan["scenes"][: len(rendered_videos)]
-
-        for idx, scene in enumerate(successful_scenes, start=1):
-            _update_job(
-                job_id,
-                progress_message=f"Generating voiceover for scene {idx} of {len(successful_scenes)}...",
-            )
-            audio_path = out_dir / f"scene_{idx:02d}.mp3"
-            generate_voice(scene["narration"], audio_path)
-            dur = get_audio_duration(audio_path)
-            audio_files.append(audio_path)
-            durations.append(dur)
 
         # ── Stage 5: Assembly ────────────────────────────────────────
         _update_job(
@@ -199,6 +198,7 @@ def run_pipeline(job_id: str) -> None:
         total_duration = sum(durations)
 
         # Build narration text for the video record
+        successful_scenes = plan["scenes"][:len(rendered_videos)]
         full_narration = "\n\n".join(
             scene["narration"] for scene in successful_scenes
         )

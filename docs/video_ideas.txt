@@ -1,0 +1,91 @@
+VIDEO IDEAS FOR CURISO
+=====================
+
+Each line: [duration] Topic prompt
+Generate with: python generate.py "PROMPT" --duration short|medium|long
+
+
+=== MATH & PHYSICS (high viral potential) ===
+
+[short] Why is 0.999... exactly equal to 1? Prove it visually
+[short] What does it actually mean to divide by zero?
+[short] Why does multiplying two negative numbers give a positive?
+[short] What is Euler's number e and why does it show up everywhere?
+[short] How does a Fourier transform break sound into frequencies?
+[short] Why is the speed of light the universal speed limit?
+[short] What is entropy and why can't you unscramble an egg?
+[short] How does the double slit experiment prove light is a wave and a particle?
+[medium] What are imaginary numbers and why do electrical engineers use them?
+[medium] How does GPS use Einstein's relativity to stay accurate?
+[long] The story of calculus: from Archimedes to Newton and Leibniz
+
+=== COMPUTER SCIENCE (tech audience) ===
+
+[short] How does a hash function turn any input into a fixed-size output?
+[short] What actually happens when you type a URL into your browser?
+[short] How does binary code represent text, images, and video?
+[short] What is Big O notation and why do programmers care about it?
+[short] How does a neural network recognize a handwritten digit?
+[short] What is recursion? Explain it by solving the Tower of Hanoi
+[short] How does Git track every change you have ever made to your code?
+[short] What is a blockchain and how does it prevent double spending?
+[medium] How does the internet actually work, from your laptop to a server across the world?
+[medium] What is a transformer model and why did it change AI forever?
+[long] How operating systems manage memory, processes, and files
+
+=== EVERYDAY SCIENCE (broad audience, TikTok friendly) ===
+
+[short] Why is the sky blue at noon but red at sunset?
+[short] How does a microwave heat food without heating the plate?
+[short] Why do mirrors flip left and right but not up and down?
+[short] How does noise cancelling actually cancel noise?
+[short] Why does hot water freeze faster than cold water? (Mpemba effect)
+[short] How do vaccines teach your immune system to fight a virus?
+[short] Why is water wet? What does "wet" even mean at the molecular level?
+[short] How does your phone know exactly where you are on Earth?
+[short] Why do we dream and what happens in the brain during REM sleep?
+[short] How does a QR code store information in a grid of squares?
+
+=== ENGINEERING & HOW THINGS WORK ===
+
+[short] How does a jet engine produce enough thrust to lift a 747?
+[short] How do touch screens detect your finger but not your glove?
+[short] How does wireless charging transfer energy without wires?
+[short] How does a refrigerator move heat from inside to outside?
+[medium] How do self-driving cars see the road using LiDAR and cameras?
+[medium] How do nuclear reactors generate electricity from splitting atoms?
+
+=== ECONOMICS & MONEY ===
+
+[short] What causes inflation and why does your money lose value over time?
+[short] How does the stock market actually determine a stock's price?
+[short] What is compound interest and why Einstein called it the 8th wonder?
+[short] How do banks create money out of thin air through lending?
+
+=== BIOLOGY ===
+
+[short] How does CRISPR edit DNA like a molecular pair of scissors?
+[short] How does your brain form and store a memory?
+[short] Why do we age and is it possible to slow it down?
+[short] How does photosynthesis turn sunlight into food?
+
+=== SPACE ===
+
+[short] What is a black hole and what happens if you fall into one?
+[short] How far away is the nearest star and how long would it take to get there?
+[short] Why do astronauts float in space if gravity still exists up there?
+[medium] How do we know the age of the universe is 13.8 billion years?
+
+
+=== SUGGESTED POSTING STRATEGY ===
+
+TikTok: Post the [short] ones daily. Physics and everyday science do best.
+YouTube Shorts: Same short content, cross-post from TikTok.
+YouTube (long form): Post [medium] and [long] ones weekly as regular videos.
+
+Start with the ones most likely to go viral:
+1. Why is 0.999... exactly equal to 1?
+2. What actually happens when you type a URL into your browser?
+3. Why do mirrors flip left and right but not up and down?
+4. What is a black hole and what happens if you fall into one?
+5. How does noise cancelling actually cancel noise?

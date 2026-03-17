@@ -57,15 +57,20 @@ CODEGEN_SYSTEM_PROMPT = f"""You are an expert Manim Community Edition (manimce) 
 
 ## Scene 1 — The Hook (MUST follow this pattern)
 
-Scene01 MUST open with the hook question or provocative statement written on screen:
-1. Black screen (self.camera.background_color = "#000000")
-2. self.wait(1) — brief pause before anything appears
-3. The hook question appears via Write() animation with run_time=3, centered (move_to(ORIGIN) or slightly above), color="#FFFF00", font_size=36, font="Avenir"
-4. self.wait(5) — the narrator reads the full Scene 1 narration while this text is on screen. This wait MUST be long enough for the narrator to finish speaking.
-5. FadeOut the question, then begin the visual explanation
-6. If the question is long, split it into two lines or use scale_to_fit_width(12)
+Scene01 has TWO phases:
 
-The hook scene's animation should be ~20-25 seconds total to match narration length. Most of that time is the text sitting on screen while the narrator speaks.
+**Phase 1 (first 3-5 seconds): The question**
+1. Black screen (self.camera.background_color = "#000000")
+2. The hook question appears via Write() animation with run_time=2, centered (move_to(ORIGIN) or slightly above), color="#FFFF00", font_size=36, font="Avenir"
+3. self.wait(2) so the viewer reads it
+4. FadeOut the question
+
+**Phase 2 (remaining time): Visual explanation begins**
+5. Immediately start showing relevant visuals that match what the narrator is saying for the REST of the scene. Use the animation_description to guide what to show.
+6. Build diagrams, show objects appearing, animate concepts — do NOT leave a static screen. The narrator is actively explaining and the visuals should match.
+
+The hook question is just the opening few seconds. Then the scene transitions into real visual content. This is how 3Blue1Brown does it — the question hooks you, then the explanation starts immediately.
+If the question is long, split it into two lines or use scale_to_fit_width(12).
 
 ## Narration-Animation Sync (CRITICAL)
 
@@ -104,11 +109,17 @@ When fixing errors:
 Respond with ONLY the Python code, no markdown fences, no explanation."""
 
 
-def generate_manim_code(plan: dict, model: str = "claude-sonnet-4-20250514") -> str:
+def generate_manim_code(
+    plan: dict,
+    scene_durations: list[float] | None = None,
+    model: str = "claude-sonnet-4-20250514",
+) -> str:
     """Generate Manim code for all scenes in the plan.
 
     Args:
         plan: The scene plan dict from planner.py.
+        scene_durations: Optional list of audio durations (seconds) per scene.
+            When provided, codegen will target these exact durations.
         model: The Claude model to use.
 
     Returns:
@@ -118,10 +129,21 @@ def generate_manim_code(plan: dict, model: str = "claude-sonnet-4-20250514") -> 
 
     # Build the prompt with all scenes
     scenes_text = ""
-    for scene in plan["scenes"]:
+    for i, scene in enumerate(plan["scenes"]):
         scenes_text += f"\n### Scene {scene['id']}\n"
+        if scene_durations and i < len(scene_durations):
+            scenes_text += f"**Audio Duration: {scene_durations[i]:.1f} seconds** (your animation MUST be this long)\n"
         scenes_text += f"**Narration:** {scene['narration']}\n"
         scenes_text += f"**Animation:** {scene['animation_description']}\n"
+
+    timing_instructions = ""
+    if scene_durations:
+        timing_instructions = """- CRITICAL TIMING: Each scene has an exact audio duration listed. Your animation for that scene MUST match that duration precisely. Add up your self.play(run_time=X) and self.wait(X) calls to hit the target. For example, if a scene is 24.0 seconds, your animation steps should total 24 seconds.
+- Distribute self.wait() calls throughout the scene so visuals stay on screen while the narrator speaks about them. Do NOT front-load all animations and then have one long wait at the end.
+- For Scene 1 (the hook), the question stays on screen for most of the scene while the narrator reads the full narration. Use a long self.wait() after the Write() animation."""
+    else:
+        timing_instructions = """- Each scene's narration will be converted to audio. Narration is spoken at ~2.5 words per second. Count the words in each scene's narration, divide by 2.5, and make the animation AT LEAST that many seconds long.
+- Use generous self.wait() calls (1.5-3 seconds) between animation steps."""
 
     prompt = f"""Generate a complete Manim Python file for this educational video.
 
@@ -133,9 +155,7 @@ def generate_manim_code(plan: dict, model: str = "claude-sonnet-4-20250514") -> 
 
 Requirements:
 - Create one Scene class per scene, named Scene01, Scene02, etc.
-- CRITICAL TIMING: Each scene's narration will be converted to audio. The animation MUST be long enough to match the narration audio. As a rule of thumb, narration is spoken at ~2.5 words per second. Count the words in each scene's narration, divide by 2.5, and make the animation AT LEAST that many seconds long.
-- Use generous self.wait() calls (1.5-3 seconds) between animation steps. The most common mistake is making animations too SHORT, which causes text to appear before the narrator says it.
-- For Scene 1 (the hook), the narration is read while the question is on screen. Add self.wait(3-5) AFTER the Write() animation so the text stays visible while the narrator reads it. Do NOT rush through the hook.
+{timing_instructions}
 - Start the file with `from manim import *`
 """
 
