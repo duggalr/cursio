@@ -135,6 +135,13 @@ def run_pipeline(job_id: str) -> None:
         if not rendered_videos:
             raise RuntimeError("No scenes rendered successfully")
 
+        # Fail if less than half the scenes rendered — don't publish a broken video
+        if len(rendered_videos) < len(scene_names) / 2:
+            raise RuntimeError(
+                f"Only {len(rendered_videos)} of {len(scene_names)} scenes rendered. "
+                f"Aborting to avoid publishing an incomplete video."
+            )
+
         # Save final (possibly patched) code
         code_path.write_text(current_code)
 
