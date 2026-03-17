@@ -22,10 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} min-h-screen antialiased`}>
+      <body className={`${inter.variable} flex min-h-screen flex-col antialiased`}>
         <FloatingBackground />
         <NavbarWrapper />
-        <main className="relative">{children}</main>
+        <main className="relative flex-1">{children}</main>
         <footer className="border-t border-[var(--color-border)] py-8">
           <div className="mx-auto max-w-6xl px-6">
             <div className="flex items-center justify-between text-xs text-[var(--color-muted)]">
