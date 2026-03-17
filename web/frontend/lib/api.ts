@@ -22,7 +22,7 @@ export interface VideoListResponse {
 export interface Job {
   id: string;
   video_id: string | null;
-  status: "pending" | "planning" | "generating" | "rendering" | "voiceover" | "assembling" | "complete" | "failed";
+  status: "pending" | "planning" | "generating" | "rendering" | "voiceover" | "assembling" | "completed" | "failed";
   current_step: string;
   error: string | null;
   created_at: string;
