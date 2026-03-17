@@ -156,11 +156,8 @@ export default function HomePage() {
   }, [search, tab, communitySort, user]);
 
   useEffect(() => {
-    if (videos.length === 0 && !search) {
-      loadVideos(true);
-    } else {
-      loadVideos(false);
-    }
+    setVideos([]);
+    loadVideos(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, tab, communitySort]);
 
