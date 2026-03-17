@@ -53,6 +53,8 @@ export default function HomePage() {
   const [duration, setDuration] = useState("short");
   const [submitting, setSubmitting] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [genCount, setGenCount] = useState<number | null>(null);
+  const GEN_LIMIT = 8;
 
   // Job progress (inline) — restore from localStorage on mount
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
@@ -78,6 +80,25 @@ export default function HomePage() {
         }
       } catch {
         // ignore — no active job
+      }
+    })();
+  }, [user]);
+
+  // Fetch generation count for current month
+  useEffect(() => {
+    if (!user || !supabaseRef.current) return;
+    (async () => {
+      try {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const { count } = await supabaseRef.current!
+          .from("generation_jobs")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .gte("created_at", monthStart);
+        setGenCount(count || 0);
+      } catch {
+        // ignore
       }
     })();
   }, [user]);
@@ -250,14 +271,21 @@ export default function HomePage() {
             >
               Learn anything.
             </h1>
-            <motion.p
-              className="mt-1.5 text-sm text-[var(--color-muted)]"
+            <motion.div
+              className="mt-1.5 flex items-baseline justify-between gap-4"
               initial={{ opacity: 0 }}
               animate={mounted ? { opacity: 1 } : { opacity: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
             >
-              Enter a topic you're curious about, pick a video length, and let AI generate an animated explanation for you.
-            </motion.p>
+              <p className="text-sm text-[var(--color-muted)]">
+                Enter a topic you're curious about, pick a video length, and let AI generate an animated explanation for you.
+              </p>
+              {user && genCount !== null && (
+                <span className="shrink-0 text-xs text-[var(--color-muted)]">
+                  {Math.max(0, GEN_LIMIT - genCount)}/{GEN_LIMIT} free this month
+                </span>
+              )}
+            </motion.div>
           </div>
 
           <motion.form
