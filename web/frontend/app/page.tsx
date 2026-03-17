@@ -454,7 +454,7 @@ export default function HomePage() {
                   : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
               }`}
             >
-              Recent
+              Community: Recent
             </button>
             <button
               onClick={() => setSort("most_liked")}
@@ -464,7 +464,7 @@ export default function HomePage() {
                   : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
               }`}
             >
-              Most Liked
+              Community: Most Liked
             </button>
           </div>
 
