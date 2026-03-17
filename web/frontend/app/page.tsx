@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import VideoCard from "@/components/VideoCard";
@@ -31,6 +32,7 @@ function getStepIndex(status: string): number {
 
 export default function HomePage() {
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
   const [videos, setVideos] = useState<Video[]>([]);
   const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,7 +70,7 @@ export default function HomePage() {
         const { data: { session } } = await supabaseRef.current!.auth.getSession();
         if (!session?.access_token) return;
         const job = await fetchActiveJob(session.access_token);
-        if (job && job.status !== "complete" && job.status !== "failed") {
+        if (job && job.status !== "completed" && job.status !== "failed") {
           setActiveJobId(job.id);
           setJobStatus(job.status);
         }
@@ -141,11 +143,12 @@ export default function HomePage() {
       try {
         const data = await fetchJobStatus(activeJobId);
         setJobStatus(data.status);
-        if (data.status === "complete") {
-          setJobVideoId(data.video_id);
+        if (data.status === "completed") {
           localStorage.removeItem("curiso_active_job");
           if (pollRef.current) clearInterval(pollRef.current);
-          loadVideos(false);
+          if (data.video_id) {
+            router.push(`/video/${data.video_id}`);
+          }
         } else if (data.status === "failed") {
           setJobError(data.error || "Generation failed");
           localStorage.removeItem("curiso_active_job");
@@ -295,7 +298,7 @@ export default function HomePage() {
 
           {/* Inline generation progress */}
           <AnimatePresence>
-            {activeJobId && jobStatus && jobStatus !== "complete" && !jobError && (
+            {activeJobId && jobStatus && jobStatus !== "completed" && !jobError && (
               <motion.div
                 className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
                 initial={{ opacity: 0, y: -8 }}
@@ -336,7 +339,7 @@ export default function HomePage() {
 
           {/* Job complete */}
           <AnimatePresence>
-            {jobStatus === "complete" && jobVideoId && (
+            {jobStatus === "completed" && jobVideoId && (
               <motion.div
                 className="mt-4 flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3"
                 initial={{ opacity: 0, scale: 0.97 }}
