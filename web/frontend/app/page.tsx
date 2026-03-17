@@ -37,7 +37,8 @@ export default function HomePage() {
   const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<"my_videos" | "recent" | "most_liked">("recent");
+  const [tab, setTab] = useState<"my_videos" | "community">("community");
+  const [communitySort, setCommunitySort] = useState<"recent" | "most_liked">("recent");
   const [tabInitialized, setTabInitialized] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -109,18 +110,16 @@ export default function HomePage() {
   useEffect(() => {
     if (tabInitialized) return;
     if (user) {
-      setSort("my_videos");
+      setTab("my_videos");
       setTabInitialized(true);
     } else if (user === null && supabaseRef.current) {
-      // Auth resolved, user is not logged in
       setTabInitialized(true);
     }
   }, [user, tabInitialized]);
 
   // Load videos
   const loadVideos = useCallback(async (isInitial = false) => {
-    if (sort === "my_videos") {
-      // Fetch user's videos from Supabase directly
+    if (tab === "my_videos") {
       if (!supabaseRef.current || !user) {
         setVideos([]);
         setInitialLoad(false);
@@ -146,7 +145,7 @@ export default function HomePage() {
     if (isInitial) setInitialLoad(true);
     else setRefreshing(true);
     try {
-      const data = await fetchVideos({ search: search || undefined, sort });
+      const data = await fetchVideos({ search: search || undefined, sort: communitySort });
       setVideos(data.videos);
     } catch {
       setVideos([]);
@@ -154,7 +153,7 @@ export default function HomePage() {
       setInitialLoad(false);
       setRefreshing(false);
     }
-  }, [search, sort, user]);
+  }, [search, tab, communitySort, user]);
 
   useEffect(() => {
     if (videos.length === 0 && !search) {
@@ -163,7 +162,7 @@ export default function HomePage() {
       loadVideos(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, sort]);
+  }, [search, tab, communitySort]);
 
   // Debounced real-time search
   const handleSearchInput = (value: string) => {
@@ -433,49 +432,49 @@ export default function HomePage() {
           transition={{ delay: 0.3, duration: 0.4 }}
         >
           <div className="flex items-center justify-between">
-          <div className="flex gap-4 text-sm">
-            {user && (
+            <div className="flex gap-4 text-sm">
+              {user && (
+                <button
+                  onClick={() => setTab("my_videos")}
+                  className={`transition-colors ${
+                    tab === "my_videos"
+                      ? "font-medium text-[var(--color-foreground)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                  }`}
+                >
+                  My Videos
+                </button>
+              )}
               <button
-                onClick={() => setSort("my_videos")}
+                onClick={() => setTab("community")}
                 className={`transition-colors ${
-                  sort === "my_videos"
+                  tab === "community"
                     ? "font-medium text-[var(--color-foreground)]"
                     : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                 }`}
               >
-                My Videos
+                Community
               </button>
-            )}
-            <button
-              onClick={() => setSort("recent")}
-              className={`transition-colors ${
-                sort === "recent"
-                  ? "font-medium text-[var(--color-foreground)]"
-                  : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-              }`}
-            >
-              Community: Recent
-            </button>
-            <button
-              onClick={() => setSort("most_liked")}
-              className={`transition-colors ${
-                sort === "most_liked"
-                  ? "font-medium text-[var(--color-foreground)]"
-                  : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-              }`}
-            >
-              Community: Most Liked
-            </button>
-          </div>
+            </div>
 
-          {sort !== "my_videos" && (
-            <input
-              type="text"
-              onChange={(e) => handleSearchInput(e.target.value)}
-              placeholder="Search..."
-              className="w-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
-            />
-          )}
+            {tab === "community" && (
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  placeholder="Search..."
+                  className="w-36 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
+                />
+                <select
+                  value={communitySort}
+                  onChange={(e) => setCommunitySort(e.target.value as "recent" | "most_liked")}
+                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs text-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
+                >
+                  <option value="recent">Recent</option>
+                  <option value="most_liked">Most Liked</option>
+                </select>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -516,7 +515,7 @@ export default function HomePage() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                {sort === "my_videos" ? (
+                {tab === "my_videos" ? (
                   <div>
                     <p className="mb-2 text-sm font-medium text-[var(--color-foreground)]">
                       You haven't generated any videos yet.
