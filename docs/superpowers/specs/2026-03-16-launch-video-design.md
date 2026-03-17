@@ -41,7 +41,7 @@ The CTA is clean: product name, tagline, URL or "try it now."
 
 ## Vibe A — Cinematic / Hype
 
-**Tone:** Dramatic narrator, deliberate pacing, building energy. Short punchy sentences with breathing room. ~60-70 words of narration total.
+**Tone:** Dramatic narrator, deliberate pacing, building energy. Short punchy sentences with breathing room. ~110-140 words of narration total (~2.5 words/sec).
 
 **Scenes (4):**
 
