@@ -33,8 +33,10 @@ Animation style:
   - Use Create() for geometric shapes and graphs
   - Use Transform() and ReplacementTransform() for morphing between objects
   - Use rate_func=smooth for most animations
-  - Use self.wait(1) to self.wait(2) between major steps for breathing room
+  - CRITICAL PACING: Use self.wait(2) to self.wait(3) between major steps. Animations feel rushed without enough wait time. The narrator needs time to speak while the visual sits on screen.
+  - For Write() animations on text, use run_time=2 or run_time=3 so the text appears slowly, matching narration pace
   - Scene transitions: FadeOut(*self.mobjects) then FadeIn new ones
+  - Total scene duration should be AT LEAST 20 seconds. Most narrations are 20-35 seconds long. If your animation is shorter than 20s, add more self.wait() calls.
 
 Layout (CRITICAL — nothing must be cut off):
   - NEVER place objects at the very edge of the screen
@@ -57,12 +59,13 @@ CODEGEN_SYSTEM_PROMPT = f"""You are an expert Manim Community Edition (manimce) 
 
 Scene01 MUST open with the hook question or provocative statement written on screen:
 1. Black screen (self.camera.background_color = "#000000")
-2. The hook question appears via Write() animation, centered (move_to(ORIGIN) or slightly above), color="#FFFF00", font_size=36, font="Avenir"
-3. self.wait(2) so the viewer can read it
-4. FadeOut the question, then begin the visual explanation
-5. If the question is long, split it into two lines or use scale_to_fit_width(12)
+2. self.wait(1) — brief pause before anything appears
+3. The hook question appears via Write() animation with run_time=3, centered (move_to(ORIGIN) or slightly above), color="#FFFF00", font_size=36, font="Avenir"
+4. self.wait(5) — the narrator reads the full Scene 1 narration while this text is on screen. This wait MUST be long enough for the narrator to finish speaking.
+5. FadeOut the question, then begin the visual explanation
+6. If the question is long, split it into two lines or use scale_to_fit_width(12)
 
-This creates a welcoming, engaging opening — the viewer reads the question and wants to know the answer.
+The hook scene's animation should be ~20-25 seconds total to match narration length. Most of that time is the text sitting on screen while the narrator speaks.
 
 ## Narration-Animation Sync (CRITICAL)
 
@@ -130,8 +133,9 @@ def generate_manim_code(plan: dict, model: str = "claude-sonnet-4-20250514") -> 
 
 Requirements:
 - Create one Scene class per scene, named Scene01, Scene02, etc.
-- Each scene should be ~15-30 seconds of animation (use self.wait() for pacing)
-- The animation should visually match the narration timing
+- CRITICAL TIMING: Each scene's narration will be converted to audio. The animation MUST be long enough to match the narration audio. As a rule of thumb, narration is spoken at ~2.5 words per second. Count the words in each scene's narration, divide by 2.5, and make the animation AT LEAST that many seconds long.
+- Use generous self.wait() calls (1.5-3 seconds) between animation steps. The most common mistake is making animations too SHORT, which causes text to appear before the narrator says it.
+- For Scene 1 (the hook), the narration is read while the question is on screen. Add self.wait(3-5) AFTER the Write() animation so the text stays visible while the narrator reads it. Do NOT rush through the hook.
 - Start the file with `from manim import *`
 """
 
