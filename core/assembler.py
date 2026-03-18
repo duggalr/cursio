@@ -151,10 +151,10 @@ def generate_thumbnail(video_path: Path, output_path: Path, timestamp: float = 5
     Returns:
         Path to the thumbnail file.
     """
-    # Get video duration to ensure timestamp is valid
+    # Get video duration and grab a frame from ~40% in,
+    # past the hook question into the visual explanation
     dur = _get_duration(video_path)
-    # Use 30% into the video if timestamp exceeds duration
-    t = min(timestamp, dur * 0.3) if dur > 0 else 0
+    t = dur * 0.4 if dur > 0 else timestamp
 
     _run_ffmpeg([
         "-ss", str(t),
