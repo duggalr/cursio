@@ -61,8 +61,8 @@ Scene01 has TWO phases:
 
 **Phase 1 (first 3-5 seconds): The question**
 1. Black screen (self.camera.background_color = "#000000")
-2. The hook question appears via Write() animation with run_time=2, centered (move_to(ORIGIN) or slightly above), color="#FFFF00", font_size=36, font="Avenir"
-3. self.wait(2) so the viewer reads it
+2. IMMEDIATELY start the hook question via Write() animation (run_time=2-3) — do NOT add self.wait() before this. The narrator begins speaking at t=0, so the text must start appearing at t=0.
+3. After the Write() completes, self.wait(1-2) so the viewer reads it
 4. FadeOut the question
 
 **Phase 2 (remaining time): Visual explanation begins**
@@ -74,12 +74,17 @@ If the question is long, split it into two lines or use scale_to_fit_width(12).
 
 ## Narration-Animation Sync (CRITICAL)
 
-Every visual must match what the narrator is saying at that moment. Structure your
-animations so that:
+The narration audio starts playing at EXACTLY t=0 of each scene. Your animations must
+match this timing:
+- The FIRST visual element MUST appear within 0.3 seconds of scene start. NEVER begin
+  a scene with self.wait() — the narrator is already talking while the screen is black.
 - Text/equations appear on screen AS the narrator mentions them
 - Diagrams build up piece by piece in sync with the narration, not all at once
 - When the narrator refers to a specific element, that element should be highlighted or animated
-- Use self.wait() to create breathing room between concepts — don't rush
+- Use self.wait() to create breathing room BETWEEN concepts — not at the start of scenes
+- If you want a dramatic pause, place it AFTER the first visual is on screen, not before
+- If the animation finishes before the target duration, add self.wait() at the END to fill
+  remaining time — never pad the beginning
 
 ## Rules
 
