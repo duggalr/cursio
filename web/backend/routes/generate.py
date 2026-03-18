@@ -13,7 +13,7 @@ from web.backend.worker import run_pipeline
 
 router = APIRouter(prefix="/api", tags=["generate"])
 
-MONTHLY_RATE_LIMIT = 8
+# MONTHLY_RATE_LIMIT = 8  # Temporarily disabled — unlimited generations
 
 
 def _extract_token(authorization: str) -> str:
@@ -44,22 +44,23 @@ async def generate_video(
     user_id: str = user["sub"]
     supabase = get_supabase()
 
-    # --- Rate limit: max N jobs per calendar month ---
-    now = datetime.now(timezone.utc)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
-    recent_jobs = (
-        supabase.table("generation_jobs")
-        .select("id", count="exact")
-        .eq("user_id", user_id)
-        .gte("created_at", month_start)
-        .execute()
-    )
-    job_count = recent_jobs.count if recent_jobs.count is not None else len(recent_jobs.data)
-    if job_count >= MONTHLY_RATE_LIMIT:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Rate limit exceeded — maximum {MONTHLY_RATE_LIMIT} free videos per month",
-        )
+    # --- Rate limit: temporarily disabled (unlimited generations) ---
+    # TODO: Re-enable when ready
+    # now = datetime.now(timezone.utc)
+    # month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+    # recent_jobs = (
+    #     supabase.table("generation_jobs")
+    #     .select("id", count="exact")
+    #     .eq("user_id", user_id)
+    #     .gte("created_at", month_start)
+    #     .execute()
+    # )
+    # job_count = recent_jobs.count if recent_jobs.count is not None else len(recent_jobs.data)
+    # if job_count >= MONTHLY_RATE_LIMIT:
+    #     raise HTTPException(
+    #         status_code=429,
+    #         detail=f"Rate limit exceeded — maximum {MONTHLY_RATE_LIMIT} free videos per month",
+    #     )
 
     # --- Create job row ---
     job_row = {

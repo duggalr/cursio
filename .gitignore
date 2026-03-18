@@ -20,9 +20,13 @@ media/
 # OS
 .DS_Store
 
-# Launch video rendered output
-launch_video/output/*
-!launch_video/output/.gitkeep
+# Internal docs and planning
+docs/
+launch_video/
+feedback_one.md
+
+# Business
+business_goals/
 
 # Tools
 .superpowers/

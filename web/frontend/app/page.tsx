@@ -280,11 +280,13 @@ export default function HomePage() {
               <p className="text-sm text-[var(--color-muted)]">
                 Enter a topic you're curious about, pick a video length, and let AI generate an animated explanation for you.
               </p>
+              {/* TODO: Re-enable when rate limits are back
               {user && genCount !== null && (
                 <span className="shrink-0 text-xs text-[var(--color-muted)]">
                   {Math.max(0, GEN_LIMIT - genCount)}/{GEN_LIMIT} free this month
                 </span>
               )}
+              */}
             </motion.div>
           </div>
 
