@@ -185,6 +185,17 @@ export default function VideoPage() {
             {copied ? "Copied!" : "Share"}
           </button>
 
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/videos/${id}/vertical`}
+            className="flex items-center gap-1.5 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-foreground)]"
+            download
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75V3m0 15.75l-4.5-4.5m4.5 4.5l4.5-4.5M3.75 21h16.5" />
+            </svg>
+            Download for Reels
+          </a>
+
           <span className="text-xs text-[var(--color-muted)]">
             {new Date(video.created_at).toLocaleDateString("en-US", {
               year: "numeric",
