@@ -164,22 +164,8 @@ export default function Navbar() {
                       <p className="text-sm font-medium text-[var(--color-foreground)]">
                         {user.email}
                       </p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-xs text-[var(--color-muted)]">
-                          Free generations this month
-                        </span>
-                        <span className="text-xs font-medium text-[var(--color-foreground)]">
-                          {remaining} / {FREE_GENERATIONS_PER_MONTH}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-hover)]">
-                        <div
-                          className="h-full rounded-full bg-[var(--color-foreground)] transition-all"
-                          style={{ width: `${(remaining / FREE_GENERATIONS_PER_MONTH) * 100}%` }}
-                        />
-                      </div>
-                      <p className="mt-2 text-[10px] text-[var(--color-muted)]">
-                        More generations per month coming soon.
+                      <p className="mt-1 text-xs text-[var(--color-muted)]">
+                        Unlimited generations. 100% free!
                       </p>
                     </div>
 
