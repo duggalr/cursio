@@ -280,7 +280,7 @@ export default function HomePage() {
               <p className="text-sm text-[var(--color-muted)]">
                 Enter a topic you're curious about, pick a video length, and let AI generate an animated explanation for you.
               </p>
-              <span className="shrink-0 text-xs text-[var(--color-muted)]">
+              <span className="hidden shrink-0 text-xs text-[var(--color-muted)] sm:inline">
                 Unlimited generations. 100% free!
               </span>
             </motion.div>
