@@ -174,6 +174,26 @@ def run_pipeline(job_id: str) -> None:
         thumbnail_path = out_dir / "thumbnail.jpg"
         generate_thumbnail(final_path, thumbnail_path)
 
+        # ── Generate vertical (9:16) version for Reels/TikTok ─────
+        _update_job(
+            job_id,
+            progress_message="Creating vertical version for Reels...",
+        )
+        vertical_path = out_dir / "vertical.mp4"
+        import subprocess as _sp
+        _sp.run(
+            [
+                "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                "-i", str(final_path),
+                "-filter_complex",
+                "[0:v]scale=1080:-2[scaled];color=c=black:s=1080x1920:d=999[bg];[bg][scaled]overlay=0:(1920-h)/2[out]",
+                "-map", "[out]", "-map", "0:a", "-c:a", "copy",
+                "-shortest", "-pix_fmt", "yuv420p",
+                str(vertical_path),
+            ],
+            capture_output=True, text=True, timeout=120,
+        )
+
         # ── Upload to Supabase Storage ───────────────────────────────
         _update_job(
             job_id,
@@ -189,6 +209,18 @@ def run_pipeline(job_id: str) -> None:
             )
 
         video_url = supabase.storage.from_("generated_videos").get_public_url(storage_path)
+
+        # Upload vertical version
+        vertical_video_url = None
+        if vertical_path.exists():
+            vert_storage_path = f"videos/{job_id}/vertical.mp4"
+            with open(vertical_path, "rb") as f:
+                supabase.storage.from_("generated_videos").upload(
+                    vert_storage_path,
+                    f,
+                    file_options={"content-type": "video/mp4"},
+                )
+            vertical_video_url = supabase.storage.from_("generated_videos").get_public_url(vert_storage_path)
 
         # Upload thumbnail
         thumb_storage_path = f"videos/{job_id}/thumbnail.jpg"
@@ -219,6 +251,7 @@ def run_pipeline(job_id: str) -> None:
             "aha_moment": plan.get("aha_moment"),
             "narration_text": full_narration,
             "video_url": video_url,
+            "vertical_video_url": vertical_video_url,
             "thumbnail_url": thumbnail_url,
             "video_duration_seconds": total_duration,
             "view_count": 0,

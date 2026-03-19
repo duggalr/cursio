@@ -2,12 +2,7 @@
 Video listing, detail, and like endpoints.
 """
 
-import subprocess
-import tempfile
-from pathlib import Path
-
 from fastapi import APIRouter, HTTPException, Header, Query
-from fastapi.responses import FileResponse
 
 from web.backend.models import Video, VideoListResponse
 from web.backend.supabase_client import get_supabase, get_user_from_token
@@ -79,64 +74,6 @@ async def get_video(video_id: str):
 
     return Video(**video_data)
 
-
-@router.get("/{video_id}/vertical")
-async def get_vertical_video(video_id: str):
-    """Download a 9:16 vertical version of the video for Reels/TikTok/Shorts."""
-    supabase = get_supabase()
-
-    response = (
-        supabase.table("videos")
-        .select("video_url, title")
-        .eq("id", video_id)
-        .single()
-        .execute()
-    )
-
-    if not response.data or not response.data.get("video_url"):
-        raise HTTPException(status_code=404, detail="Video not found")
-
-    video_url = response.data["video_url"]
-    title = response.data.get("title", "video")
-
-    # Download the original video to a temp file
-    tmp_dir = tempfile.mkdtemp()
-    input_path = Path(tmp_dir) / "input.mp4"
-    output_path = Path(tmp_dir) / "vertical.mp4"
-
-    dl = subprocess.run(
-        ["curl", "-sL", "-o", str(input_path), video_url],
-        capture_output=True, timeout=60,
-    )
-    if dl.returncode != 0 or not input_path.exists():
-        raise HTTPException(status_code=500, detail="Failed to download video")
-
-    # Convert to 9:16 with black padding
-    result = subprocess.run(
-        [
-            "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
-            "-i", str(input_path),
-            "-filter_complex",
-            "[0:v]scale=1080:-2[scaled];color=c=black:s=1080x1920:d=999[bg];[bg][scaled]overlay=0:(1920-h)/2[out]",
-            "-map", "[out]", "-map", "0:a", "-c:a", "copy",
-            "-shortest", "-pix_fmt", "yuv420p",
-            str(output_path),
-        ],
-        capture_output=True, text=True, timeout=120,
-    )
-
-    if result.returncode != 0 or not output_path.exists():
-        raise HTTPException(status_code=500, detail="Failed to convert video")
-
-    # Clean filename
-    safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in title).strip()
-    filename = f"{safe_title} - Vertical.mp4"
-
-    return FileResponse(
-        str(output_path),
-        media_type="video/mp4",
-        filename=filename,
-    )
 
 
 @router.get("/{video_id}/like")

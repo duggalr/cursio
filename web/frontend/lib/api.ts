@@ -7,6 +7,7 @@ export interface Video {
   duration: "short" | "medium" | "long";
   thumbnail_url: string | null;
   video_url: string | null;
+  vertical_video_url: string | null;
   narration_text: string | null;
   like_count: number;
   created_at: string;

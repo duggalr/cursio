@@ -42,6 +42,7 @@ class Video(BaseModel):
     aha_moment: str | None = None
     narration_text: str | None = None
     video_url: str | None = None
+    vertical_video_url: str | None = None
     thumbnail_url: str | None = None
     video_duration_seconds: float | None = None
     view_count: int = 0
