@@ -8,7 +8,7 @@ const sections = [
   {
     title: "What is Curiso?",
     content:
-      "Curiso is an AI-powered platform that turns any topic into a short, animated educational video. Type in what you want to learn about, and within minutes you will get a visual explanation with narration, animations, and a clear storyline. Think of it as having a personal tutor who can explain anything visually, on demand.",
+      "Curiso is a 100% free AI-powered platform that turns any topic into a short, animated educational video. Type in what you want to learn about, and within minutes you will get a visual explanation with narration, animations, and a clear storyline. No limits, no payment required. Think of it as having a personal tutor who can explain anything visually, on demand.",
   },
   {
     title: "How it works",
@@ -152,7 +152,7 @@ export default function AboutPage() {
           Curious about something?
         </h2>
         <p className="mb-5 text-sm text-[var(--color-muted)]">
-          Generate your first video for free. It only takes a minute.
+          Curiso is 100% free with unlimited generations. Create your first video now.
         </p>
         <Link
           href="/"
