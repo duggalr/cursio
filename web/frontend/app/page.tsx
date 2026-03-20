@@ -68,11 +68,15 @@ export default function HomePage() {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const supabaseRef = useRef<SupabaseClient | null>(null);
 
-  // Randomize suggested topics on mount
-  const [suggestedTopics] = useState(() => {
+  // Randomize suggested topics
+  const [suggestedTopics, setSuggestedTopics] = useState(() => {
     const shuffled = [...allTopics].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 5);
   });
+  const refreshTopics = () => {
+    const shuffled = [...allTopics].sort(() => Math.random() - 0.5);
+    setSuggestedTopics(shuffled.slice(0, 5));
+  };
 
   // Generate state
   const [topic, setTopic] = useState("");
@@ -327,7 +331,7 @@ export default function HomePage() {
                 className="w-full resize-none bg-transparent text-sm text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none"
               />
               {!topic.trim() && (
-                <div className="flex flex-wrap gap-1.5 pt-1 pb-2">
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 pb-2">
                   {suggestedTopics.map((s) => (
                     <button
                       key={s.label}
@@ -338,6 +342,16 @@ export default function HomePage() {
                       {s.label}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={refreshTopics}
+                    className="rounded-full p-1.5 text-[var(--color-muted)] transition-colors hover:text-[var(--color-foreground)]"
+                    title="Show different topics"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5.1 15A7.002 7.002 0 0019 12M18.9 9A7.002 7.002 0 005 12" />
+                    </svg>
+                  </button>
                 </div>
               )}
               <div className="flex items-center justify-between pt-2">
