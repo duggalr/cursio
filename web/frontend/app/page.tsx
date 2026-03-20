@@ -360,14 +360,18 @@ export default function HomePage() {
                     <button
                       key={d}
                       type="button"
-                      onClick={() => setDuration(d)}
+                      disabled={d === "long"}
+                      onClick={() => d !== "long" && setDuration(d)}
                       className={`rounded-md px-3 py-1 text-xs capitalize transition-colors ${
-                        duration === d
-                          ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
-                          : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                        d === "long"
+                          ? "cursor-not-allowed text-[var(--color-border)]"
+                          : duration === d
+                            ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                            : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                       }`}
+                      title={d === "long" ? "Coming soon" : ""}
                     >
-                      {d}
+                      {d}{d === "long" ? " (soon)" : ""}
                     </button>
                   ))}
                 </div>
