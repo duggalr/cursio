@@ -4,6 +4,7 @@ updates the Supabase job row as it progresses through each stage.
 """
 
 import json
+import os
 import re
 import sys
 import traceback
@@ -23,6 +24,55 @@ from core.assembler import combine_scene, concatenate_scenes, generate_thumbnail
 from web.backend.supabase_client import get_supabase  # noqa: E402
 
 OUTPUT_ROOT = PROJECT_ROOT / "output"
+
+SITE_URL = os.environ.get("SITE_URL", "https://curiso.app")
+
+
+def _send_completion_email(user_email: str, video_title: str, video_id: str, thumbnail_url: str | None) -> None:
+    """Send an email notification when a video generation completes."""
+    resend_key = os.environ.get("RESEND_API_KEY")
+    if not resend_key:
+        return
+
+    try:
+        import resend
+        resend.api_key = resend_key
+
+        video_url = f"{SITE_URL}/video/{video_id}"
+
+        html = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px; color: #37352f;">
+          <h1 style="font-size: 24px; font-weight: normal; font-family: Georgia, serif; margin-bottom: 8px;">Curiso</h1>
+          <p style="font-size: 13px; color: #9b9a97; margin-bottom: 32px;">Understand anything visually.</p>
+
+          <h2 style="font-size: 18px; font-weight: 500; margin-bottom: 12px;">Your video is ready!</h2>
+          <p style="font-size: 14px; line-height: 1.6; color: #37352f; margin-bottom: 24px;">
+            Your video <strong>{video_title}</strong> has been generated and is ready to watch.
+          </p>
+
+          {"<img src='" + thumbnail_url + "' alt='Video thumbnail' style='width: 100%; border-radius: 8px; margin-bottom: 24px;' />" if thumbnail_url else ""}
+
+          <a href="{video_url}" style="display: inline-block; background: #37352f; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">
+            Watch Video
+          </a>
+
+          <hr style="border: none; border-top: 1px solid #e3e2df; margin: 32px 0;" />
+          <p style="font-size: 11px; color: #9b9a97;">
+            Curiso — 100% free AI-powered educational video generation<br/>
+            <a href="https://curiso.app" style="color: #9b9a97;">curiso.app</a>
+          </p>
+        </div>
+        """
+
+        resend.Emails.send({
+            "from": "Curiso <noreply@curiso.app>",
+            "to": [user_email],
+            "subject": f"Your video is ready: {video_title}",
+            "html": html,
+        })
+    except Exception:
+        # Don't fail the pipeline if email fails
+        pass
 
 
 def slugify(text: str) -> str:
@@ -266,6 +316,19 @@ def run_pipeline(job_id: str) -> None:
             progress_message="Video ready!",
             video_id=video_id,
         )
+
+        # ── Send completion email ─────────────────────────────────────
+        try:
+            user_resp = supabase.auth.admin.get_user_by_id(user_id)
+            if user_resp and user_resp.user and user_resp.user.email:
+                _send_completion_email(
+                    user_email=user_resp.user.email,
+                    video_title=plan.get("title", topic),
+                    video_id=video_id,
+                    thumbnail_url=thumbnail_url,
+                )
+        except Exception:
+            pass  # Don't fail the pipeline if email fails
 
     except Exception:
         _update_job(

@@ -390,7 +390,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <p className="mt-2.5 text-[11px] text-[var(--color-muted)]">
-                  This usually takes around 5 minutes. You can refresh or leave this page — we'll notify you when it's ready.
+                  This usually takes around 5 minutes. You can refresh or leave this page — we'll email you once your video is complete.
                 </p>
               </motion.div>
             )}
