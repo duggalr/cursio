@@ -9,12 +9,32 @@ import AuthModal from "@/components/AuthModal";
 import { fetchVideos, fetchJobStatus, fetchActiveJob, generateVideo, type Video } from "@/lib/api";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
-const suggestedTopics = [
-  { label: "How gravity works", prompt: "Explain how gravity works — from Newton's apple to Einstein's curved spacetime" },
+const allTopics = [
+  { label: "How gravity works", prompt: "Explain how gravity works, from Newton's apple to Einstein's curved spacetime" },
   { label: "Why the sky is blue", prompt: "Why is the sky blue? Explain Rayleigh scattering and how light interacts with the atmosphere" },
   { label: "How neural networks learn", prompt: "How do neural networks learn? Walk through forward propagation, loss functions, and backpropagation" },
   { label: "The Fibonacci sequence", prompt: "What is the Fibonacci sequence, where does it appear in nature, and why is it connected to the golden ratio?" },
   { label: "How encryption works", prompt: "How does public-key encryption work? Explain RSA and why it keeps our data safe" },
+  { label: "Why 0.999... equals 1", prompt: "Why is 0.999 repeating exactly equal to 1? Prove it visually" },
+  { label: "What is a black hole", prompt: "What is a black hole and what happens if you fall into one?" },
+  { label: "How noise cancelling works", prompt: "How does noise cancelling actually cancel noise? Explain destructive interference" },
+  { label: "Why mirrors flip left/right", prompt: "Why do mirrors flip left and right but not up and down?" },
+  { label: "What is Euler's number e", prompt: "What is Euler's number e and why does it show up everywhere in math and nature?" },
+  { label: "How GPS uses relativity", prompt: "How does GPS use Einstein's relativity to stay accurate?" },
+  { label: "Why we dream", prompt: "Why do we dream and what happens in the brain during REM sleep?" },
+  { label: "How CRISPR edits DNA", prompt: "How does CRISPR edit DNA like a molecular pair of scissors?" },
+  { label: "What causes inflation", prompt: "What causes inflation and why does your money lose value over time?" },
+  { label: "How a CPU works", prompt: "How does a CPU execute instructions? Explain the fetch-decode-execute cycle" },
+  { label: "Why planes fly", prompt: "How do airplane wings generate lift? Explain Bernoulli's principle and angle of attack" },
+  { label: "How WiFi sends data", prompt: "How does WiFi transmit data through the air using radio waves?" },
+  { label: "What is entropy", prompt: "What is entropy and why can't you unscramble an egg?" },
+  { label: "How vaccines work", prompt: "How do vaccines teach your immune system to fight a virus?" },
+  { label: "The double slit experiment", prompt: "How does the double slit experiment prove light is both a wave and a particle?" },
+  { label: "How blockchain works", prompt: "What is a blockchain and how does it prevent double spending?" },
+  { label: "Why compound interest matters", prompt: "What is compound interest and why did Einstein call it the 8th wonder of the world?" },
+  { label: "How QR codes store data", prompt: "How does a QR code store information in a grid of squares?" },
+  { label: "What is the Turing machine", prompt: "What is a Turing machine and why did it lead to modern computers?" },
+  { label: "How magnets work", prompt: "How do magnets work at the atomic level? Why do some metals stick together?" },
 ];
 
 const steps = [
@@ -47,6 +67,12 @@ export default function HomePage() {
   const [authModal, setAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const supabaseRef = useRef<SupabaseClient | null>(null);
+
+  // Randomize suggested topics on mount
+  const [suggestedTopics] = useState(() => {
+    const shuffled = [...allTopics].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 5);
+  });
 
   // Generate state
   const [topic, setTopic] = useState("");
