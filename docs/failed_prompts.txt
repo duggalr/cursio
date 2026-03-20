@@ -1,0 +1,6 @@
+Failed User Prompts (to retry after fixes)
+============================================
+
+1. [2026-03-20] "explain why i can't use the axiom of choice to map all the reals into the integers, i can totally keep picking one and putting an index to it."
+   Error: Scene03 render timed out after 120 seconds
+   User: 747e4dfb...

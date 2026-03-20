@@ -51,12 +51,27 @@ def render_scene(
             scene_name,
         ]
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+        except subprocess.TimeoutExpired:
+            print(f"    Render timed out for {scene_name} (attempt {attempt + 1}/{max_retries + 1})")
+            if attempt < max_retries:
+                print(f"    Asking Claude to simplify the animation...")
+                current_code = fix_manim_code(
+                    current_code,
+                    f"Scene {scene_name} timed out after 300 seconds. The animation is too complex. "
+                    f"Simplify {scene_name}: use fewer objects, simpler animations, remove any loops that create many objects. "
+                    f"Keep the same educational content but make the visuals simpler and faster to render."
+                )
+                continue
+            else:
+                print(f"    Skipping {scene_name} after timeout on all attempts.")
+                return None, current_code
 
         if result.returncode == 0:
             # Find the rendered file
