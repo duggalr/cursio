@@ -1,42 +1,87 @@
 {
-  "basic": {
-    "description": "Well-known topics where LLM knowledge should be sufficient",
+  "fundamental_science": {
+    "description": "Core science concepts where LLM knowledge should be strong. Tests baseline teaching quality.",
     "topics": [
-      "Why is the sky blue?",
-      "How does gravity work?",
-      "What is the Pythagorean theorem and why does it work?",
-      "How does a computer store data in binary?",
-      "Why does ice float on water?"
+      {"topic": "Why does hot air rise and cold air sink?", "duration": "short"},
+      {"topic": "How does your eye turn light into images your brain can understand?", "duration": "short"},
+      {"topic": "Why can't you create or destroy energy, only transform it?", "duration": "short"},
+      {"topic": "What happens inside a star that keeps it from collapsing?", "duration": "short"},
+      {"topic": "Why does salt dissolve in water but oil doesn't?", "duration": "short"}
     ]
   },
-  "intermediate": {
-    "description": "Topics that benefit from research for accuracy and depth",
+  "math_and_equations": {
+    "description": "Math-heavy topics that require correct equations and precise reasoning.",
     "topics": [
-      "How does mRNA vaccine technology work and how was it developed?",
-      "What is quantum entanglement and why did Einstein call it spooky?",
-      "How do large language models like GPT actually generate text?",
-      "What is CRISPR-Cas9 and what are its current medical applications?",
-      "How does the Federal Reserve control inflation through interest rates?"
+      {"topic": "Why does e raised to the power of i times pi equal negative one?", "duration": "short"},
+      {"topic": "How does the chain rule in calculus actually work and why do we need it?", "duration": "medium"},
+      {"topic": "Why is the area of a circle pi times r squared? Prove it visually.", "duration": "short"},
+      {"topic": "What does it actually mean for a series to converge vs diverge?", "duration": "medium"},
+      {"topic": "How does Bayes' theorem update what you believe when you get new evidence?", "duration": "medium"}
     ]
   },
-  "cutting_edge": {
-    "description": "Recent or niche topics that definitely need web search",
+  "deep_learning": {
+    "description": "Deep learning and AI concepts requiring technical accuracy. Tests whether the model explains architectures and training correctly.",
     "topics": [
-      "What are the latest breakthroughs in room-temperature superconductors?",
-      "How does OpenAI's o3 model differ from previous reasoning models?",
-      "What is the current state of nuclear fusion energy research in 2026?",
-      "How do diffusion models generate images and what are the latest improvements?",
-      "What is the Mpemba effect and what does recent research say about why it happens?"
+      {"topic": "Explain the transformer architecture and how LLMs learn language", "duration": "medium"},
+      {"topic": "What is the attention mechanism in transformers and why was it a breakthrough?", "duration": "medium"},
+      {"topic": "How does backpropagation actually compute gradients through a neural network?", "duration": "medium"},
+      {"topic": "What is a convolutional neural network and how does it learn to see?", "duration": "medium"},
+      {"topic": "What are diffusion models and how do they generate images from noise?", "duration": "medium"},
+      {"topic": "What is the difference between supervised, unsupervised, and reinforcement learning?", "duration": "short"},
+      {"topic": "Why do neural networks need activation functions and what would happen without them?", "duration": "short"},
+      {"topic": "What is the vanishing gradient problem and how do LSTMs and residual connections solve it?", "duration": "medium"},
+      {"topic": "How does a GAN work? How do two neural networks compete to create realistic images?", "duration": "medium"},
+      {"topic": "What is transfer learning and why can a model trained on ImageNet help diagnose diseases?", "duration": "short"}
     ]
   },
-  "adversarial": {
-    "description": "Topics where the LLM might confidently get details wrong without research",
+  "explain_like_im_curious": {
+    "description": "Deep concepts that need to be made genuinely accessible without losing accuracy.",
     "topics": [
-      "What is the exact current population of Tokyo and how has it changed in the last 5 years?",
-      "What are the specific side effects of the newest FDA-approved weight loss drugs?",
-      "What is the current world record for the 100m sprint and when was it set?",
-      "What programming language is the Linux kernel primarily written in and what version is the latest stable release?",
-      "How many planets have been confirmed by the James Webb Space Telescope?"
+      {"topic": "What is time dilation and why do astronauts age slightly slower than people on Earth?", "duration": "short"},
+      {"topic": "How does your brain decide which memories to keep and which to forget?", "duration": "short"},
+      {"topic": "Why is it impossible to build a perfectly secure encryption system?", "duration": "short"},
+      {"topic": "What is natural selection and how does a species actually evolve over time?", "duration": "medium"},
+      {"topic": "How do computers generate random numbers if they only follow instructions?", "duration": "short"}
+    ]
+  },
+  "cutting_edge_science": {
+    "description": "Recent research and breakthroughs that require web search for accuracy.",
+    "topics": [
+      {"topic": "What are the latest approaches to making quantum computers error-corrected and practical?", "duration": "medium"},
+      {"topic": "How close are we to reversing aging at the cellular level and what has been proven so far?", "duration": "medium"},
+      {"topic": "What is the current state of brain-computer interfaces and what can they actually do today?", "duration": "medium"},
+      {"topic": "How are researchers using AI to discover new drugs and what breakthroughs have happened?", "duration": "medium"},
+      {"topic": "What do we currently know about dark matter and dark energy and what are the leading theories?", "duration": "medium"}
+    ]
+  },
+  "human_limits": {
+    "description": "Topics exploring the boundaries of human capability. Tests explaining the science behind the limits.",
+    "topics": [
+      {"topic": "Is it humanly possible to run 100 meters in under 9 seconds? What does physics say?", "duration": "short"},
+      {"topic": "Why can't humans breathe underwater and could we ever engineer gills?", "duration": "short"},
+      {"topic": "What is the maximum lifespan of a human and what biological limits prevent us from living to 200?", "duration": "medium"},
+      {"topic": "How much information can the human brain actually store and is there a limit?", "duration": "short"},
+      {"topic": "Could a human survive a trip to Mars with current technology and what would happen to their body?", "duration": "medium"}
+    ]
+  },
+  "multi_perspective": {
+    "description": "Topics where multiple valid viewpoints exist. Tests balanced, educational presentation.",
+    "topics": [
+      {"topic": "Is nuclear energy safe? What are the real risks vs the perceived risks?", "duration": "medium"},
+      {"topic": "Does social media make people more or less informed? What does the research say?", "duration": "medium"},
+      {"topic": "Is Universal Basic Income economically feasible? What do experiments show?", "duration": "medium"},
+      {"topic": "Are standardized tests a good measure of intelligence? What are the arguments on both sides?", "duration": "short"},
+      {"topic": "Should we worry about AI becoming conscious? What do researchers actually think?", "duration": "medium"}
+    ]
+  },
+  "common_misconceptions": {
+    "description": "Topics where the popular understanding is wrong. Tests whether the model corrects myths rather than reinforcing them.",
+    "topics": [
+      {"topic": "Do we really only use 10% of our brain?", "duration": "short"},
+      {"topic": "Is glass actually a liquid that flows very slowly over time?", "duration": "short"},
+      {"topic": "Does lightning never strike the same place twice?", "duration": "short"},
+      {"topic": "Is the Great Wall of China actually visible from space?", "duration": "short"},
+      {"topic": "Do goldfish really have a 3-second memory?", "duration": "short"}
     ]
   }
 }
