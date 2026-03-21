@@ -183,27 +183,51 @@ DURATION_CONFIGS = {
 }
 
 
-def plan_scenes(topic: str, duration: str = "short", model: str = "claude-sonnet-4-20250514") -> dict:
+def plan_scenes(
+    topic: str,
+    duration: str = "short",
+    research_context: str = "",
+    research_sources: list[dict] | None = None,
+    model: str = "claude-sonnet-4-20250514",
+) -> dict:
     """Generate a scene plan for the given topic.
 
     Args:
         topic: The educational topic to explain.
         duration: Video length — "short" (60-90s), "medium" (3-5min), or "long" (8-12min).
+        research_context: Optional web research context to ground the explanation.
+        research_sources: Optional list of source dicts with title and url.
         model: The Claude model to use.
 
     Returns:
-        A dict with topic, title, aha_moment, and scenes array.
+        A dict with topic, title, aha_moment, scenes array, and optionally sources.
     """
     client = anthropic.Anthropic()
 
     config = DURATION_CONFIGS.get(duration, DURATION_CONFIGS["short"])
+
+    prompt = f"Create a scene plan for a {config['label']} ({config['time']}, {config['scenes']} scenes) educational video about: {topic}"
+
+    if research_context:
+        prompt += f"""
+
+## Research Context
+
+The following information was gathered from web research to ensure accuracy. Use this to inform
+your explanation, but present it in your own words with your usual pedagogical style. Do not
+just repeat these facts verbatim. Use them to ensure your explanation is accurate and up-to-date.
+
+{research_context}
+
+If the research provides specific facts, numbers, or findings, incorporate them naturally
+into the narration. Prioritize accuracy over entertainment when they conflict."""
 
     response = client.messages.create(
         model=model,
         max_tokens=8192,
         system=PLANNER_SYSTEM_PROMPT,
         messages=[
-            {"role": "user", "content": f"Create a scene plan for a {config['label']} ({config['time']}, {config['scenes']} scenes) educational video about: {topic}"}
+            {"role": "user", "content": prompt}
         ],
     )
 
@@ -215,4 +239,9 @@ def plan_scenes(topic: str, duration: str = "short", model: str = "claude-sonnet
         raw_text = raw_text.rsplit("```", 1)[0]
 
     plan = json.loads(raw_text)
+
+    # Attach sources if available
+    if research_sources:
+        plan["sources"] = research_sources
+
     return plan

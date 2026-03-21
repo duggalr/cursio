@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.planner import plan_scenes  # noqa: E402
+from core.research import research_topic  # noqa: E402
 from core.codegen import generate_manim_code  # noqa: E402
 from core.renderer import render_scene, get_scene_names  # noqa: E402
 from core.voice import generate_voice, get_audio_duration  # noqa: E402
@@ -109,9 +110,17 @@ def run_pipeline(job_id: str) -> None:
     user_id: str = job["user_id"]
 
     try:
-        # ── Stage 1: Planning ────────────────────────────────────────
-        _update_job(job_id, status="planning", progress_message="Planning scenes...")
-        plan = plan_scenes(topic, duration=duration)
+        # ── Stage 1: Research + Planning ─────────────────────────────
+        _update_job(job_id, status="planning", progress_message="Researching topic...")
+        research = research_topic(topic)
+
+        _update_job(job_id, progress_message="Planning scenes...")
+        plan = plan_scenes(
+            topic,
+            duration=duration,
+            research_context=research.context if research.needed else "",
+            research_sources=research.sources if research.needed else None,
+        )
 
         topic_slug = slugify(plan["topic"])
         out_dir = OUTPUT_ROOT / f"web_{job_id}_{topic_slug}"

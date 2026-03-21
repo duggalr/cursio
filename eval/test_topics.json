@@ -1,0 +1,42 @@
+{
+  "basic": {
+    "description": "Well-known topics where LLM knowledge should be sufficient",
+    "topics": [
+      "Why is the sky blue?",
+      "How does gravity work?",
+      "What is the Pythagorean theorem and why does it work?",
+      "How does a computer store data in binary?",
+      "Why does ice float on water?"
+    ]
+  },
+  "intermediate": {
+    "description": "Topics that benefit from research for accuracy and depth",
+    "topics": [
+      "How does mRNA vaccine technology work and how was it developed?",
+      "What is quantum entanglement and why did Einstein call it spooky?",
+      "How do large language models like GPT actually generate text?",
+      "What is CRISPR-Cas9 and what are its current medical applications?",
+      "How does the Federal Reserve control inflation through interest rates?"
+    ]
+  },
+  "cutting_edge": {
+    "description": "Recent or niche topics that definitely need web search",
+    "topics": [
+      "What are the latest breakthroughs in room-temperature superconductors?",
+      "How does OpenAI's o3 model differ from previous reasoning models?",
+      "What is the current state of nuclear fusion energy research in 2026?",
+      "How do diffusion models generate images and what are the latest improvements?",
+      "What is the Mpemba effect and what does recent research say about why it happens?"
+    ]
+  },
+  "adversarial": {
+    "description": "Topics where the LLM might confidently get details wrong without research",
+    "topics": [
+      "What is the exact current population of Tokyo and how has it changed in the last 5 years?",
+      "What are the specific side effects of the newest FDA-approved weight loss drugs?",
+      "What is the current world record for the 100m sprint and when was it set?",
+      "What programming language is the Linux kernel primarily written in and what version is the latest stable release?",
+      "How many planets have been confirmed by the James Webb Space Telescope?"
+    ]
+  }
+}
