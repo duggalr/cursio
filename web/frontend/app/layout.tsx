@@ -32,7 +32,7 @@ export default function RootLayout({
               <span style={{ fontFamily: "var(--font-serif)" }}>Curiso</span>
               <div className="flex gap-4">
                 <a href="/about" className="transition-colors hover:text-[var(--color-foreground)]">About</a>
-                <a href="#" className="transition-colors hover:text-[var(--color-foreground)]">Contact</a>
+                <a href="mailto:rahul@curiso.app" className="transition-colors hover:text-[var(--color-foreground)]">Contact</a>
               </div>
             </div>
           </div>
