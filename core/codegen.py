@@ -117,6 +117,7 @@ Respond with ONLY the Python code, no markdown fences, no explanation."""
 def generate_manim_code(
     plan: dict,
     scene_durations: list[float] | None = None,
+    visual_blueprint: dict | None = None,
     model: str = "claude-sonnet-4-20250514",
 ) -> str:
     """Generate Manim code for all scenes in the plan.
@@ -125,6 +126,8 @@ def generate_manim_code(
         plan: The scene plan dict from planner.py.
         scene_durations: Optional list of audio durations (seconds) per scene.
             When provided, codegen will target these exact durations.
+        visual_blueprint: Optional visual design blueprint from visual_designer.py.
+            When provided, codegen follows the detailed animation steps.
         model: The Claude model to use.
 
     Returns:
@@ -140,6 +143,18 @@ def generate_manim_code(
             scenes_text += f"**Audio Duration: {scene_durations[i]:.1f} seconds** (your animation MUST be this long)\n"
         scenes_text += f"**Narration:** {scene['narration']}\n"
         scenes_text += f"**Animation:** {scene['animation_description']}\n"
+
+        # Include visual blueprint if available
+        if visual_blueprint:
+            bp_scenes = visual_blueprint.get("scenes", [])
+            for bp in bp_scenes:
+                if bp.get("scene_id") == scene["id"]:
+                    scenes_text += f"\n**Visual Blueprint (follow these steps closely):**\n"
+                    for step in bp.get("steps", []):
+                        scenes_text += f"  - [{step.get('time', '?')}s] {step.get('action', '')}\n"
+                        scenes_text += f"    Objects: {step.get('manim_objects', '')}\n"
+                        scenes_text += f"    Animation: {step.get('animation', '')}\n"
+                    break
 
     timing_instructions = ""
     if scene_durations:

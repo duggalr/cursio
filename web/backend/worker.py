@@ -17,6 +17,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from core.planner import plan_scenes  # noqa: E402
 from core.research import research_topic  # noqa: E402
+from core.visual_designer import design_visuals  # noqa: E402
 from core.codegen import generate_manim_code  # noqa: E402
 from core.renderer import render_scene, get_scene_names  # noqa: E402
 from core.voice import generate_voice, get_audio_duration  # noqa: E402
@@ -152,13 +153,19 @@ def run_pipeline(job_id: str) -> None:
             audio_files.append(audio_path)
             durations.append(dur)
 
-        # ── Stage 3: Code generation (with exact audio durations) ───
+        # ── Stage 3: Visual design + Code generation ─────────────────
         _update_job(
             job_id,
             status="generating",
+            progress_message="Designing visual animations...",
+        )
+        visual_blueprint = design_visuals(plan, scene_durations=durations)
+
+        _update_job(
+            job_id,
             progress_message=f"Generating animation code for {num_scenes} scenes...",
         )
-        code = generate_manim_code(plan, scene_durations=durations)
+        code = generate_manim_code(plan, scene_durations=durations, visual_blueprint=visual_blueprint)
         code_path = out_dir / "scenes.py"
         code_path.write_text(code)
 

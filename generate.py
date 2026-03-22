@@ -25,6 +25,7 @@ load_dotenv(Path(__file__).parent / ".env")
 
 from core.planner import plan_scenes
 from core.research import research_topic
+from core.visual_designer import design_visuals
 from core.codegen import generate_manim_code
 from core.renderer import render_scene, get_scene_names
 from core.voice import generate_voice, get_audio_duration
@@ -155,14 +156,26 @@ def main():
             durations.append(dur)
             print(f"  Audio: {audio_path} ({dur:.1f}s)")
 
-    # ─── Step 3: Generate Manim code (with exact durations) ──────────
+    # ─── Step 3a: Visual Design ──────────────────────────────────────
     print(f"\n{'='*60}")
-    print(f"Step 3/6: Generating Manim code (targeting audio durations)")
+    print(f"Step 3a/6: Designing visual blueprint (3B1B style)")
+    print(f"{'='*60}")
+
+    visual_blueprint = design_visuals(plan, scene_durations=durations)
+    blueprint_path = out_dir / "visual_blueprint.json"
+    blueprint_path.write_text(json.dumps(visual_blueprint, indent=2))
+    print(f"  Blueprint saved to: {blueprint_path}")
+    for bp_scene in visual_blueprint.get("scenes", []):
+        print(f"  Scene {bp_scene.get('scene_id')}: {len(bp_scene.get('steps', []))} visual steps")
+
+    # ─── Step 3b: Generate Manim code (with durations + blueprint) ──
+    print(f"\n{'='*60}")
+    print(f"Step 3b/6: Generating Manim code (targeting audio durations)")
     print(f"{'='*60}")
     for i, dur in enumerate(durations):
         print(f"  Scene {i+1}: {dur:.1f}s target")
 
-    code = generate_manim_code(plan, scene_durations=durations)
+    code = generate_manim_code(plan, scene_durations=durations, visual_blueprint=visual_blueprint)
     code_path = out_dir / "scenes.py"
     code_path.write_text(code)
     print(f"Code saved to: {code_path}")
