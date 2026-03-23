@@ -205,6 +205,58 @@ Requirements:
     return code
 
 
+def generate_single_scene_code(
+    plan: dict,
+    scene_index: int,
+    model: str = "claude-sonnet-4-20250514",
+) -> str:
+    """Generate standalone Manim code for a single scene.
+
+    Unlike generate_manim_code() which creates all scenes in one file,
+    this generates a self-contained file for one scene — enabling
+    independent rendering and iteration.
+    """
+    client = anthropic.Anthropic()
+    scene = plan["scenes"][scene_index]
+    scene_num = scene_index + 1
+
+    # Provide full plan context but only ask for one scene
+    context = f"This is Scene {scene_num} of {len(plan['scenes'])} in a video titled \"{plan['title']}\" about \"{plan['topic']}\"."
+    if scene_index > 0:
+        prev = plan["scenes"][scene_index - 1]
+        context += f"\n\nThe previous scene covered: {prev['animation_description']}"
+
+    prompt = f"""Generate a SINGLE standalone Manim scene file.
+
+{context}
+
+### Scene {scene_num}
+**Narration:** {scene['narration']}
+**Animation:** {scene['animation_description']}
+
+Requirements:
+- Create exactly ONE Scene class named Scene{scene_num:02d}
+- The file must be fully self-contained (start with `from manim import *`)
+- Make the animation feel natural with generous pacing — DO NOT rush
+- Use self.wait(1.5-3) between major steps so the viewer can absorb each concept
+- Estimate ~2.5 words per second for the narration to guide your timing
+- The narration has {len(scene['narration'].split())} words ≈ {len(scene['narration'].split()) / 2.5:.0f} seconds target
+"""
+
+    response = client.messages.create(
+        model=model,
+        max_tokens=8192,
+        system=CODEGEN_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    code = response.content[0].text.strip()
+    if code.startswith("```"):
+        code = code.split("\n", 1)[1].rsplit("```", 1)[0]
+
+    return code
+
+
 def fix_manim_code(code: str, error: str, model: str = "claude-sonnet-4-20250514") -> str:
     """Send broken code + error back to Claude for a fix.
 
