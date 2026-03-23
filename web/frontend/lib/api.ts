@@ -7,6 +7,7 @@ export interface VideoSource {
 
 export interface Video {
   id: string;
+  slug: string;
   title: string;
   topic: string;
   duration: "short" | "medium" | "long";
@@ -16,6 +17,7 @@ export interface Video {
   narration_text: string | null;
   like_count: number;
   sources: VideoSource[] | null;
+  tags: string[] | null;
   created_at: string;
 }
 
@@ -41,12 +43,14 @@ export async function fetchVideos(params?: {
   sort?: string;
   page?: number;
   limit?: number;
+  tag?: string;
 }): Promise<VideoListResponse> {
   const searchParams = new URLSearchParams();
   if (params?.search) searchParams.set("search", params.search);
   if (params?.sort) searchParams.set("sort", params.sort);
   if (params?.page) searchParams.set("page", String(params.page));
   if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.tag) searchParams.set("tag", params.tag);
 
   const query = searchParams.toString();
   const url = `${API_URL}/api/videos${query ? `?${query}` : ""}`;
@@ -58,8 +62,20 @@ export async function fetchVideos(params?: {
   return res.json();
 }
 
-export async function fetchVideo(id: string): Promise<Video> {
-  const res = await fetch(`${API_URL}/api/videos/${id}`);
+export interface TagWithCount {
+  tag: string;
+  count: number;
+}
+
+export async function fetchTags(): Promise<TagWithCount[]> {
+  const res = await fetch(`${API_URL}/api/tags`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.tags || [];
+}
+
+export async function fetchVideo(slug: string): Promise<Video> {
+  const res = await fetch(`${API_URL}/api/videos/${slug}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch video: ${res.statusText}`);
   }

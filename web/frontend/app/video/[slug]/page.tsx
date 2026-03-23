@@ -7,9 +7,17 @@ import { motion } from "motion/react";
 import { fetchVideo, likeVideo, unlikeVideo, checkIfLiked, type Video } from "@/lib/api";
 import AuthModal from "@/components/AuthModal";
 
+function parseTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === "string") {
+    try { return JSON.parse(tags); } catch { return []; }
+  }
+  return [];
+}
+
 export default function VideoPage() {
   const params = useParams();
-  const id = params.id as string;
+  const slug = params.slug as string;
 
   const [video, setVideo] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +33,7 @@ export default function VideoPage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await fetchVideo(id);
+        const data = await fetchVideo(slug);
         setVideo(data);
         setLikeCount(data.like_count || 0);
 
@@ -33,7 +41,7 @@ export default function VideoPage() {
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
-          const isLiked = await checkIfLiked(id, session.access_token);
+          const isLiked = await checkIfLiked(data.id, session.access_token);
           setLiked(isLiked);
         }
       } catch (err) {
@@ -43,9 +51,10 @@ export default function VideoPage() {
       }
     }
     load();
-  }, [id]);
+  }, [slug]);
 
   const handleLike = async () => {
+    if (!video) return;
     const { createClient } = await import("@/lib/supabase");
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
@@ -58,11 +67,11 @@ export default function VideoPage() {
     setLikeLoading(true);
     try {
       if (liked) {
-        await unlikeVideo(id, session.access_token);
+        await unlikeVideo(video.id, session.access_token);
         setLiked(false);
         setLikeCount((c) => Math.max(0, c - 1));
       } else {
-        await likeVideo(id, session.access_token);
+        await likeVideo(video.id, session.access_token);
         setLiked(true);
         setLikeCount((c) => c + 1);
       }
@@ -161,6 +170,20 @@ export default function VideoPage() {
           {video.title}
         </h1>
         <p className="mt-1 text-sm text-[var(--color-muted)]">{video.topic}</p>
+
+        {parseTags(video.tags).length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {parseTags(video.tags).map((tag) => (
+              <Link
+                key={tag}
+                href={`/?tag=${encodeURIComponent(tag)}`}
+                className="rounded-full border border-[var(--color-border)] px-2.5 py-0.5 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+              >
+                {tag}
+              </Link>
+            ))}
+          </div>
+        )}
 
         <div className="mt-4 flex items-center gap-4">
           <button

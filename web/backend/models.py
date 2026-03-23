@@ -48,7 +48,9 @@ class Video(BaseModel):
     video_duration_seconds: float | None = None
     view_count: int = 0
     like_count: int = 0
+    slug: str | None = None
     sources: list[dict] | None = None
+    tags: list[str] | None = None
     created_at: str
 
 

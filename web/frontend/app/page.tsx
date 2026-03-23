@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import VideoCard from "@/components/VideoCard";
 import AuthModal from "@/components/AuthModal";
-import { fetchVideos, fetchJobStatus, fetchActiveJob, generateVideo, type Video } from "@/lib/api";
+import { fetchVideos, fetchTags, fetchJobStatus, fetchActiveJob, generateVideo, type Video, type TagWithCount } from "@/lib/api";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
 const allTopics = [
@@ -56,9 +56,15 @@ export default function HomePage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [tab, setTab] = useState<"my_videos" | "community">("community");
   const [communitySort, setCommunitySort] = useState<"recent" | "most_liked">("recent");
+  const [availableTags, setAvailableTags] = useState<TagWithCount[]>([]);
+  const [selectedTag, setSelectedTag] = useState<string>("");
   const [tabInitialized, setTabInitialized] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -97,6 +103,21 @@ export default function HomePage() {
 
   // Track mount to prevent SSR → hydration animation flash
   useEffect(() => { setMounted(true); }, []);
+
+  // Fetch available tags
+  useEffect(() => {
+    fetchTags().then(setAvailableTags).catch(() => {});
+  }, []);
+
+  // Read tag from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tagParam = params.get("tag");
+    if (tagParam) {
+      setSelectedTag(tagParam);
+      setTab("community");
+    }
+  }, []);
 
   // Restore active job from backend on login
   useEffect(() => {
@@ -170,49 +191,88 @@ export default function HomePage() {
     }
   }, [user, tabInitialized]);
 
-  // Load videos
-  const loadVideos = useCallback(async (isInitial = false) => {
+  const PAGE_SIZE = 12;
+
+  // Load videos (initial or next page)
+  const loadVideos = useCallback(async (pageNum: number, append = false) => {
     if (tab === "my_videos") {
       if (!supabaseRef.current || !user) {
         setVideos([]);
         setInitialLoad(false);
         return;
       }
-      if (isInitial) setInitialLoad(true);
-      else setRefreshing(true);
+      if (!append) setInitialLoad(true);
       try {
-        const { data } = await supabaseRef.current
+        let query = supabaseRef.current
           .from("videos")
-          .select("id, title, topic, thumbnail_url, video_url, narration_text, created_at, duration_profile")
+          .select("id, slug, title, topic, tags, thumbnail_url, video_url, narration_text, created_at, duration_profile")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
+        if (selectedTag) {
+          query = query.contains("tags", JSON.stringify([selectedTag]));
+        }
+        const { data } = await query;
         setVideos((data || []).map((v: Record<string, unknown>) => ({ ...v, like_count: 0 } as Video)));
+        setHasMore(false); // My Videos loads all at once
       } catch {
         setVideos([]);
       } finally {
         setInitialLoad(false);
-        setRefreshing(false);
       }
       return;
     }
-    if (isInitial) setInitialLoad(true);
-    else setRefreshing(true);
+
+    if (!append) setInitialLoad(true);
+    else setLoadingMore(true);
+
     try {
-      const data = await fetchVideos({ search: search || undefined, sort: communitySort });
-      setVideos(data.videos);
+      const data = await fetchVideos({
+        search: search || undefined,
+        sort: communitySort,
+        tag: selectedTag || undefined,
+        page: pageNum,
+        limit: PAGE_SIZE,
+      });
+      if (append) {
+        setVideos((prev) => [...prev, ...data.videos]);
+      } else {
+        setVideos(data.videos);
+      }
+      setHasMore(data.videos.length === PAGE_SIZE && (data.total > pageNum * PAGE_SIZE));
     } catch {
-      setVideos([]);
+      if (!append) setVideos([]);
     } finally {
       setInitialLoad(false);
-      setRefreshing(false);
+      setLoadingMore(false);
     }
-  }, [search, tab, communitySort, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, tab, communitySort, selectedTag, user]);
 
+  // Reset and load page 1 when filters change
   useEffect(() => {
     setVideos([]);
-    loadVideos(true);
+    setPage(1);
+    setHasMore(true);
+    loadVideos(1, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, tab, communitySort]);
+  }, [search, tab, communitySort, selectedTag]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !initialLoad) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          loadVideos(nextPage, true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, initialLoad, page, loadVideos]);
 
   // Debounced real-time search
   const handleSearchInput = (value: string) => {
@@ -529,14 +589,14 @@ export default function HomePage() {
           transition={{ delay: 0.3, duration: 0.4 }}
         >
           <div className="flex items-center justify-between">
-            <div className="flex gap-4 text-sm">
+            <div className="flex gap-1 text-sm">
               {user && (
                 <button
                   onClick={() => setTab("my_videos")}
-                  className={`transition-colors ${
+                  className={`rounded-lg px-3 py-1.5 transition-colors ${
                     tab === "my_videos"
-                      ? "font-medium text-[var(--color-foreground)]"
-                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                      ? "bg-[var(--color-foreground)] font-medium text-[var(--color-background)]"
+                      : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                   }`}
                 >
                   My Videos
@@ -544,10 +604,10 @@ export default function HomePage() {
               )}
               <button
                 onClick={() => setTab("community")}
-                className={`transition-colors ${
+                className={`rounded-lg px-3 py-1.5 transition-colors ${
                   tab === "community"
-                    ? "font-medium text-[var(--color-foreground)]"
-                    : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    ? "bg-[var(--color-foreground)] font-medium text-[var(--color-background)]"
+                    : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                 }`}
               >
                 Community
@@ -573,6 +633,69 @@ export default function HomePage() {
               </div>
             )}
           </div>
+
+          {/* Tag filter pills — single row, horizontally scrollable with arrows */}
+          {availableTags.length > 0 && (
+            <div className="relative mt-3 flex items-center gap-1">
+              {/* Left arrow */}
+              <button
+                onClick={() => {
+                  const el = document.getElementById("tag-scroll");
+                  if (el) el.scrollBy({ left: -200, behavior: "smooth" });
+                }}
+                className="shrink-0 rounded-full p-1 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              <div className="relative min-w-0 flex-1">
+                <div id="tag-scroll" className="no-scrollbar flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                  <button
+                    onClick={() => setSelectedTag("")}
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs transition-colors ${
+                      !selectedTag
+                        ? "bg-[var(--color-foreground)] text-[var(--color-background)]"
+                        : "border border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {availableTags.map(({ tag, count }) => (
+                    <button
+                      key={tag}
+                      onClick={() => setSelectedTag(selectedTag === tag ? "" : tag)}
+                      className={`shrink-0 rounded-full px-3 py-1 text-xs whitespace-nowrap transition-colors ${
+                        selectedTag === tag
+                          ? "bg-[var(--color-foreground)] text-[var(--color-background)]"
+                          : "border border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                      }`}
+                    >
+                      {tag}
+                      <span className="ml-1 opacity-50">{count}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Fade hints */}
+                <div className="pointer-events-none absolute left-0 top-0 bottom-1 w-6 bg-gradient-to-r from-[var(--color-background)] to-transparent" />
+                <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-6 bg-gradient-to-l from-[var(--color-background)] to-transparent" />
+              </div>
+
+              {/* Right arrow */}
+              <button
+                onClick={() => {
+                  const el = document.getElementById("tag-scroll");
+                  if (el) el.scrollBy({ left: 200, behavior: "smooth" });
+                }}
+                className="shrink-0 rounded-full p-1 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          )}
         </motion.div>
 
         {/* Video Grid */}
@@ -634,19 +757,31 @@ export default function HomePage() {
                 )}
               </motion.div>
             ) : (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {videos.map((video, i) => (
-                  <motion.div
-                    key={video.id}
-                    className="h-full"
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
-                    transition={{ delay: 0.1 + i * 0.06, duration: 0.4, ease: "easeOut" }}
-                  >
-                    <VideoCard video={video} />
-                  </motion.div>
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {videos.map((video, i) => (
+                    <motion.div
+                      key={video.id}
+                      className="h-full"
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+                      transition={{ delay: Math.min(0.1 + (i % PAGE_SIZE) * 0.06, 0.5), duration: 0.4, ease: "easeOut" }}
+                    >
+                      <VideoCard video={video} />
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Infinite scroll trigger */}
+                <div ref={loadMoreRef} className="flex justify-center py-8">
+                  {loadingMore && (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-foreground)]" />
+                  )}
+                  {!hasMore && videos.length > PAGE_SIZE && (
+                    <p className="text-xs text-[var(--color-muted)]">You've seen all videos</p>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>

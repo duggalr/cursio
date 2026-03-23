@@ -1,24 +1,46 @@
-# Curiso — 3B1B Quality Improvement Roadmap
+# Curiso — Product Roadmap & Priorities
 
-## Phase 1: Establish Baseline (current)
-- [ ] Select 5 diverse short topics from eval set (incl. 1 DL topic)
-- [ ] Generate all 5 videos with current pipeline (no-voice mode)
-- [ ] Run plan + video evaluation on all 5
-- [ ] Review frames and identify common quality issues
-- [ ] Document baseline scores and patterns
+## Priority 1: SEO & Analytics (current branch)
+- [ ] Replace UUID video URLs with named slugs (`/video/the-hidden-reason-oil-and-water-dont-mix`)
+- [ ] Add `slug` column to videos table (unique, indexed)
+- [ ] Generate slug from title at video creation time
+- [ ] Dynamic meta tags per video page (title, description, og:image)
+- [ ] Add sitemap.xml and robots.txt
+- [ ] Add Google Analytics via @next/third-parties
 
-## Phase 2: Few-Shot Examples in Codegen
-- [ ] Pick 3 gold-standard Manim code examples (concept, math, comparison)
-- [ ] Embed directly in codegen system prompt
-- [ ] Re-run same 5 topics, compare scores to baseline
+## Priority 2: Animation Quality Improvement
+- [x] Establish baseline (5 topics, avg plan 8.3, avg video 6.6)
+- [ ] Few-shot examples in codegen prompt (target: animation_quality from 5.8 → 7+)
+- [ ] Scene-type tagging in planner → type-specific codegen guidance
+- [ ] Visual quality feedback loop (render → inspect frames → regenerate if bad)
+- [ ] Split scenes into individual files for independent iteration
 
-## Phase 3: Scene-Type Tagging
-- [ ] Add scene type field to planner output (hook, comparison, derivation, process, reveal)
-- [ ] Route to type-specific few-shot examples in codegen
-- [ ] Re-run eval, compare to Phase 2
+## Priority 3: Research Paper → Video
+- [ ] PDF upload on frontend + text extraction
+- [ ] Claude summarizes paper into scene plan (target 5-10 min)
+- [ ] End-to-end pipeline: PDF → plan → scenes → render → assemble
+- [ ] Monetization: free tier (short topic videos) vs paid tier ($20/mo for paper uploads, long videos, web search)
 
-## Phase 4: Visual Quality Feedback Loop
-- [ ] After rendering each scene, extract frames and evaluate quality
-- [ ] If quality score < threshold, regenerate with specific feedback
-- [ ] Add --quality-check flag to pipeline
-- [ ] Re-run eval, compare to Phase 3
+## Priority 4: Eve-Style Quality (Premium Tier)
+- [ ] Study Eve's CLAUDE.md approach (Claude Code as director, not API)
+- [ ] Per-scene sub-agents that render, inspect, iterate until quality passes
+- [ ] One scene per file architecture
+- [ ] Audio-last workflow (visuals locked before TTS)
+- [ ] Could be the paid tier differentiator
+
+## Priority 5: Chat Interface
+- [ ] V1: Text chat grounded on video narration + plan (simple Claude API call)
+- [ ] V2: Agent SDK with tools (search transcript, generate follow-up animations, cite timestamps)
+- [ ] Chat box on video detail page
+
+## Priority 6: Continuous Quality
+- [ ] Better voice selection (multiple ElevenLabs voices, auto-select by topic tone)
+- [ ] Improve research pipeline (filter/verify Tavily results before injecting)
+- [ ] Longer video support (medium/long reliability improvements)
+
+## Baseline Eval Results (2026-03-22)
+- Plan avg: 8.3/10 (plans are solid)
+- Video avg: 6.6/10 (visual execution is the bottleneck)
+- Worst criterion: animation_quality at 5.8
+- Common issues: black frame gaps, static periods, text cut-off, lack of progressive reveals
+- Research A/B: Tavily search didn't improve scores — made opt-in toggle instead

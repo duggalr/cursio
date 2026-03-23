@@ -82,6 +82,39 @@ def slugify(text: str) -> str:
     return re.sub(r"[-\s]+", "_", slug).strip("_")[:60]
 
 
+def url_slugify(text: str) -> str:
+    """Convert text to a URL-friendly slug for video URLs."""
+    slug = text.lower()
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"[\s]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    slug = slug.strip("-")
+    return slug[:80]
+
+
+def _generate_tags(plan: dict) -> list[str]:
+    """Generate 3-5 topic tags for a video using Claude."""
+    try:
+        import anthropic
+        client = anthropic.Anthropic()
+        topic = plan.get("topic", "")
+        title = plan.get("title", "")
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=200,
+            messages=[{
+                "role": "user",
+                "content": f"Generate 3-5 short topic tags for this educational video.\n\nTitle: {title}\nTopic: {topic}\n\nReturn ONLY a JSON array of lowercase strings, e.g. [\"physics\", \"quantum mechanics\", \"particles\"]. Tags should be broad enough to group related videos but specific enough to be useful for filtering."
+            }],
+        )
+        raw = response.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
+        return json.loads(raw)
+    except Exception:
+        return []
+
+
 def _update_job(job_id: str, **fields) -> None:
     """Update a generation_jobs row in Supabase."""
     supabase = get_supabase()
@@ -326,10 +359,25 @@ def run_pipeline(job_id: str) -> None:
             "view_count": 0,
         }
 
+        # Generate URL slug and tags
+        slug = url_slugify(plan.get("title", topic))
+        video_row["slug"] = slug
+
+        tags = _generate_tags(plan)
+        if tags:
+            video_row["tags"] = tags
+
         # Include research sources if web search was used
         if use_research and research_sources:
-            video_row["sources"] = json.dumps(research_sources)
-        video_insert = supabase.table("videos").insert(video_row).execute()
+            video_row["sources"] = research_sources
+
+        # Handle slug collisions by appending a random suffix
+        import uuid
+        try:
+            video_insert = supabase.table("videos").insert(video_row).execute()
+        except Exception:
+            video_row["slug"] = f"{slug[:70]}-{uuid.uuid4().hex[:8]}"
+            video_insert = supabase.table("videos").insert(video_row).execute()
         video_id: str = video_insert.data[0]["id"]
 
         # ── Mark job complete ────────────────────────────────────────

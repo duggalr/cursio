@@ -7,9 +7,19 @@ interface VideoCardProps {
   video: Video;
 }
 
+function parseTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === "string") {
+    try { return JSON.parse(tags); } catch { return []; }
+  }
+  return [];
+}
+
 export default function VideoCard({ video }: VideoCardProps) {
+  const tags = parseTags(video.tags);
+
   return (
-    <Link href={`/video/${video.id}`}>
+    <Link href={`/video/${video.slug || video.id}`}>
       <article className="group flex h-full flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] transition-shadow hover:shadow-sm">
         <div className="relative aspect-video w-full overflow-hidden">
           {video.thumbnail_url ? (
@@ -32,9 +42,21 @@ export default function VideoCard({ video }: VideoCardProps) {
           <h3 className="mb-0.5 text-sm font-medium text-[var(--color-foreground)] line-clamp-2 group-hover:underline">
             {video.title}
           </h3>
-          <p className="mb-3 text-xs text-[var(--color-muted)] line-clamp-1">
+          <p className="mb-2 text-xs text-[var(--color-muted)] line-clamp-1">
             {video.topic}
           </p>
+          {tags.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1">
+              {tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-[var(--color-surface-hover)] px-2 py-0.5 text-[10px] text-[var(--color-muted)]"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="mt-auto flex items-center justify-between text-xs text-[var(--color-muted)]">
             <span className="flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
