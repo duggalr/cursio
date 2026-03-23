@@ -209,9 +209,40 @@ export default function VideoPage() {
           </span>
         </div>
 
+        {/* Sources / Citations */}
+        {video.sources && video.sources.length > 0 && (
+          <div className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="flex items-center gap-2 px-4 py-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[var(--color-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span className="text-sm font-medium text-[var(--color-foreground)]">
+                Sources ({video.sources.length})
+              </span>
+            </div>
+            <div className="border-t border-[var(--color-border)] px-4 py-3">
+              <ul className="space-y-2">
+                {video.sources.map((source, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0 text-xs text-[var(--color-muted)]">[{i + 1}]</span>
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-[var(--color-foreground)] underline decoration-[var(--color-border)] underline-offset-2 transition-colors hover:decoration-[var(--color-foreground)]"
+                    >
+                      {source.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         {/* Narration */}
         {video.narration_text && (
-          <div className="mt-8 rounded-lg border border-[var(--color-border)]">
+          <div className="mt-4 rounded-lg border border-[var(--color-border)]">
             <button
               onClick={() => setNarrationOpen(!narrationOpen)}
               className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-[var(--color-foreground)]"

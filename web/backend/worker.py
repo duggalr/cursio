@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.planner import plan_scenes  # noqa: E402
+from core.research import research_topic  # noqa: E402
 from core.codegen import generate_manim_code  # noqa: E402
 from core.renderer import render_scene, get_scene_names  # noqa: E402
 from core.voice import generate_voice, get_audio_duration  # noqa: E402
@@ -107,11 +108,29 @@ def run_pipeline(job_id: str) -> None:
     topic: str = job["topic"]
     duration: str = job.get("duration_profile", "short")
     user_id: str = job["user_id"]
+    use_research: bool = job.get("use_research", False)
 
     try:
-        # ── Stage 1: Planning ────────────────────────────────────────
-        _update_job(job_id, status="planning", progress_message="Planning scenes...")
-        plan = plan_scenes(topic, duration=duration)
+        # ── Stage 1: Research + Planning ─────────────────────────────
+        research_context = ""
+        research_sources = None
+
+        if use_research:
+            _update_job(job_id, status="planning", progress_message="Researching topic...")
+            research = research_topic(topic)
+            if research.needed:
+                research_context = research.context
+                research_sources = research.sources
+        else:
+            _update_job(job_id, status="planning", progress_message="Planning scenes...")
+
+        _update_job(job_id, progress_message="Planning scenes...")
+        plan = plan_scenes(
+            topic,
+            duration=duration,
+            research_context=research_context,
+            research_sources=research_sources,
+        )
 
         topic_slug = slugify(plan["topic"])
         out_dir = OUTPUT_ROOT / f"web_{job_id}_{topic_slug}"
@@ -306,6 +325,10 @@ def run_pipeline(job_id: str) -> None:
             "video_duration_seconds": total_duration,
             "view_count": 0,
         }
+
+        # Include research sources if web search was used
+        if use_research and research_sources:
+            video_row["sources"] = json.dumps(research_sources)
         video_insert = supabase.table("videos").insert(video_row).execute()
         video_id: str = video_insert.data[0]["id"]
 

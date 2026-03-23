@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent / ".env")
 
 from core.planner import plan_scenes
+from core.research import research_topic
 from core.codegen import generate_manim_code
 from core.renderer import render_scene, get_scene_names
 from core.voice import generate_voice, get_audio_duration
@@ -97,9 +98,19 @@ def main():
         topic_slug = slugify(plan["topic"])
     else:
         print(f"\n{'='*60}")
+        print(f"Step 0: Researching topic...")
+        print(f"{'='*60}")
+        research = research_topic(args.topic)
+
+        print(f"\n{'='*60}")
         print(f"Step 1/6: Planning scenes for '{args.topic}'")
         print(f"{'='*60}")
-        plan = plan_scenes(args.topic, duration=args.duration)
+        plan = plan_scenes(
+            args.topic,
+            duration=args.duration,
+            research_context=research.context if research.needed else "",
+            research_sources=research.sources if research.needed else None,
+        )
         topic_slug = slugify(plan["topic"])
 
     # Create output directory

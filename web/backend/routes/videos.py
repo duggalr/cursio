@@ -2,9 +2,22 @@
 Video listing, detail, and like endpoints.
 """
 
+import json
+
 from fastapi import APIRouter, HTTPException, Header, Query
 
 from web.backend.models import Video, VideoListResponse
+
+
+def _parse_sources(row: dict) -> dict:
+    """Parse sources JSON string from Supabase into a list."""
+    sources = row.get("sources")
+    if isinstance(sources, str):
+        try:
+            row["sources"] = json.loads(sources)
+        except (json.JSONDecodeError, TypeError):
+            row["sources"] = None
+    return row
 from web.backend.supabase_client import get_supabase, get_user_from_token
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
@@ -45,6 +58,7 @@ async def list_videos(
         likes_data = row.pop("likes", [])
         like_count = likes_data[0]["count"] if likes_data else 0
         row["like_count"] = like_count
+        _parse_sources(row)
         videos.append(Video(**row))
 
     total = response.count if response.count is not None else len(videos)
@@ -71,6 +85,7 @@ async def get_video(video_id: str):
     video_data = response.data
     likes_data = video_data.pop("likes", [])
     video_data["like_count"] = likes_data[0]["count"] if likes_data else 0
+    _parse_sources(video_data)
 
     return Video(**video_data)
 

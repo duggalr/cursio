@@ -68,11 +68,12 @@ export default function HomePage() {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const supabaseRef = useRef<SupabaseClient | null>(null);
 
-  // Randomize suggested topics
-  const [suggestedTopics, setSuggestedTopics] = useState(() => {
+  // Randomize suggested topics (only on client to avoid hydration mismatch)
+  const [suggestedTopics, setSuggestedTopics] = useState<typeof allTopics>([]);
+  useEffect(() => {
     const shuffled = [...allTopics].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 5);
-  });
+    setSuggestedTopics(shuffled.slice(0, 5));
+  }, []);
   const refreshTopics = () => {
     const shuffled = [...allTopics].sort(() => Math.random() - 0.5);
     setSuggestedTopics(shuffled.slice(0, 5));
@@ -81,6 +82,7 @@ export default function HomePage() {
   // Generate state
   const [topic, setTopic] = useState("");
   const [duration, setDuration] = useState("short");
+  const [useResearch, setUseResearch] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [genCount, setGenCount] = useState<number | null>(null);
@@ -270,7 +272,7 @@ export default function HomePage() {
         setAuthModal(true);
         return;
       }
-      const { job_id } = await generateVideo(topic, duration, session.access_token);
+      const { job_id } = await generateVideo(topic, duration, session.access_token, useResearch);
       localStorage.setItem("curiso_active_job", job_id);
       setActiveJobId(job_id);
       setJobStatus("planning");
@@ -330,7 +332,7 @@ export default function HomePage() {
                 rows={2}
                 className="w-full resize-none bg-transparent text-sm text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none"
               />
-              {!topic.trim() && (
+              {!topic.trim() && suggestedTopics.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5 pt-1 pb-2">
                   {suggestedTopics.map((s) => (
                     <button
@@ -355,25 +357,53 @@ export default function HomePage() {
                 </div>
               )}
               <div className="flex items-center justify-between pt-2">
-                <div className="flex gap-1">
-                  {["short", "medium", "long"].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      disabled={d === "long"}
-                      onClick={() => d !== "long" && setDuration(d)}
-                      className={`rounded-md px-3 py-1 text-xs capitalize transition-colors ${
-                        d === "long"
-                          ? "cursor-not-allowed text-[var(--color-border)]"
-                          : duration === d
-                            ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
-                            : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1">
+                    {["short", "medium", "long"].map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        disabled={d === "long"}
+                        onClick={() => d !== "long" && setDuration(d)}
+                        className={`rounded-md px-3 py-1 text-xs capitalize transition-colors ${
+                          d === "long"
+                            ? "cursor-not-allowed text-[var(--color-border)]"
+                            : duration === d
+                              ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                        }`}
+                        title={d === "long" ? "Coming soon" : ""}
+                      >
+                        {d}{d === "long" ? " (soon)" : ""}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="h-4 w-px bg-[var(--color-border)]" />
+
+                  <button
+                    type="button"
+                    onClick={() => setUseResearch(!useResearch)}
+                    className="flex items-center gap-2 text-xs text-[var(--color-muted)]"
+                  >
+                    <span
+                      className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+                        useResearch ? "bg-[var(--color-foreground)]" : "bg-[var(--color-border)]"
                       }`}
-                      title={d === "long" ? "Coming soon" : ""}
                     >
-                      {d}{d === "long" ? " (soon)" : ""}
-                    </button>
-                  ))}
+                      <span
+                        className={`inline-block h-3 w-3 rounded-full bg-[var(--color-background)] transition-transform ${
+                          useResearch ? "translate-x-3.5" : "translate-x-0.5"
+                        }`}
+                      />
+                    </span>
+                    <span className={useResearch ? "text-[var(--color-foreground)]" : ""}>
+                      Web search
+                    </span>
+                    <span className="hidden text-[10px] sm:inline">
+                      (for niche topics, research, or recent events)
+                    </span>
+                  </button>
                 </div>
                 <button
                   type="submit"
