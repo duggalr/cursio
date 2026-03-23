@@ -47,3 +47,35 @@ app.include_router(jobs.router)
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok"}
+
+
+@app.get("/api/tags")
+async def list_tags():
+    """Return all unique tags with video counts, sorted by count descending."""
+    from web.backend.supabase_client import get_supabase
+    import json
+    from collections import Counter
+
+    supabase = get_supabase()
+    response = supabase.table("videos").select("tags").not_.is_("tags", "null").execute()
+
+    tag_counts: Counter = Counter()
+    for row in response.data:
+        tags = row.get("tags")
+        if isinstance(tags, str):
+            try:
+                tags = json.loads(tags)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        if isinstance(tags, list):
+            for tag in tags:
+                if isinstance(tag, str):
+                    tag_counts[tag] += 1
+
+    # Return sorted by count descending
+    tags_with_counts = [
+        {"tag": tag, "count": count}
+        for tag, count in tag_counts.most_common()
+    ]
+
+    return {"tags": tags_with_counts}
