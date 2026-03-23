@@ -21,9 +21,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install pytest httpx
-          pip install -r web/backend/requirements.txt 2>/dev/null || true
+          pip install anthropic python-dotenv pyjwt fastapi uvicorn httpx supabase tavily-python
+          pip install pytest
 
       - name: Run tests
         env:
