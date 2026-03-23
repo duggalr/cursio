@@ -245,3 +245,47 @@ into the narration. Prioritize accuracy over entertainment when they conflict.""
         plan["sources"] = research_sources
 
     return plan
+
+
+def adjust_narration_for_duration(
+    original_narration: str,
+    target_duration: float,
+    topic_context: str = "",
+    model: str = "claude-sonnet-4-20250514",
+) -> str:
+    """Rewrite narration to match a target audio duration.
+
+    At ~2.5 words/second, calculates target word count and asks Claude
+    to expand or trim the narration while preserving meaning and tone.
+    """
+    target_words = int(target_duration * 2.5)
+    current_words = len(original_narration.split())
+
+    # If already close enough (within 15%), keep as-is
+    if abs(current_words - target_words) / max(target_words, 1) < 0.15:
+        return original_narration
+
+    client = anthropic.Anthropic()
+
+    action = "expand" if target_words > current_words else "trim"
+
+    response = client.messages.create(
+        model=model,
+        max_tokens=2048,
+        messages=[{
+            "role": "user",
+            "content": f"""Rewrite this narration to be approximately {target_words} words (currently {current_words} words).
+The target audio duration is {target_duration:.1f} seconds at ~2.5 words/second.
+
+{"Topic context: " + topic_context if topic_context else ""}
+
+Original narration:
+{original_narration}
+
+{action.upper()} the narration to ~{target_words} words. Keep the same tone, key points, and educational value. {"Add more detail, examples, or bridging sentences." if action == "expand" else "Remove redundancy and tighten sentences."}
+
+Return ONLY the rewritten narration text, nothing else."""
+        }],
+    )
+
+    return response.content[0].text.strip()
