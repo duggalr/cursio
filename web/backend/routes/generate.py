@@ -68,6 +68,7 @@ async def generate_video(
         "topic": body.topic,
         "duration_profile": body.duration.value,
         "use_research": body.use_research,
+        "quality_mode": body.quality_mode,
         "status": "queued",
         "progress_message": "Waiting in queue...",
     }

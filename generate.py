@@ -80,6 +80,11 @@ def main():
         help="Faster, lower-quality render for previewing",
     )
     parser.add_argument(
+        "--quality",
+        action="store_true",
+        help="Quality mode: per-scene iteration with visual inspection",
+    )
+    parser.add_argument(
         "--duration",
         type=str,
         choices=["short", "medium", "long"],
@@ -128,6 +133,15 @@ def main():
 
     if args.scenes_only:
         print(f"\n--scenes-only: stopping here. Edit {plan_path} and re-run with --from-plan")
+        return
+
+    if args.quality:
+        from core.quality_pipeline import run_quality_pipeline
+        print(f"\n{'='*60}")
+        print(f"Quality Mode: Per-scene iteration with visual inspection")
+        print(f"{'='*60}")
+        result = run_quality_pipeline(plan, out_dir, no_voice=args.no_voice)
+        print(f"\nFinal video: {result['final_path']}")
         return
 
     # ─── Step 2: Generate voiceover (audio-first for timing) ────────

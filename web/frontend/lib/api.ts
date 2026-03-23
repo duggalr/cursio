@@ -86,7 +86,8 @@ export async function generateVideo(
   topic: string,
   duration: string,
   token: string,
-  useResearch: boolean = false
+  useResearch: boolean = false,
+  qualityMode: boolean = false,
 ): Promise<{ job_id: string }> {
   const res = await fetch(`${API_URL}/api/generate`, {
     method: "POST",
@@ -94,7 +95,7 @@ export async function generateVideo(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ topic, duration, use_research: useResearch }),
+    body: JSON.stringify({ topic, duration, use_research: useResearch, quality_mode: qualityMode }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

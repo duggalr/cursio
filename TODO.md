@@ -1,12 +1,16 @@
 # Curiso — Product Roadmap & Priorities
 
-## Priority 1: SEO & Analytics (current branch)
-- [ ] Replace UUID video URLs with named slugs (`/video/the-hidden-reason-oil-and-water-dont-mix`)
-- [ ] Add `slug` column to videos table (unique, indexed)
-- [ ] Generate slug from title at video creation time
-- [ ] Dynamic meta tags per video page (title, description, og:image)
-- [ ] Add sitemap.xml and robots.txt
-- [ ] Add Google Analytics via @next/third-parties
+## Priority 1: SEO & Analytics — DONE
+- [x] Replace UUID video URLs with named slugs
+- [x] Add slug column to videos table (unique, indexed)
+- [x] Generate slug from title at video creation time
+- [x] Dynamic meta tags per video page (title, description, og:image)
+- [x] Add sitemap.xml and robots.txt
+- [x] Add Google Analytics (G-EYYQZ0KEM0)
+- [x] Auto-generated tags per video with tag filtering
+- [x] Infinite scroll pagination
+- [x] Word-level search matching
+- [x] CI pipeline (27 backend tests + frontend build)
 
 ## Priority 2: Animation Quality Improvement
 - [x] Establish baseline (5 topics, avg plan 8.3, avg video 6.6)
@@ -15,14 +19,14 @@
 - [ ] Visual quality feedback loop (render → inspect frames → regenerate if bad)
 - [ ] Split scenes into individual files for independent iteration
 
-## Priority 3: Research Paper → Video
+## Priority 3: Research Paper → Video (NEXT)
+- [ ] Study Eve's CLAUDE.md approach to understand quality patterns
 - [ ] PDF upload on frontend + text extraction
 - [ ] Claude summarizes paper into scene plan (target 5-10 min)
 - [ ] End-to-end pipeline: PDF → plan → scenes → render → assemble
 - [ ] Monetization: free tier (short topic videos) vs paid tier ($20/mo for paper uploads, long videos, web search)
 
 ## Priority 4: Eve-Style Quality (Premium Tier)
-- [ ] Study Eve's CLAUDE.md approach (Claude Code as director, not API)
 - [ ] Per-scene sub-agents that render, inspect, iterate until quality passes
 - [ ] One scene per file architecture
 - [ ] Audio-last workflow (visuals locked before TTS)
@@ -37,6 +41,10 @@
 - [ ] Better voice selection (multiple ElevenLabs voices, auto-select by topic tone)
 - [ ] Improve research pipeline (filter/verify Tavily results before injecting)
 - [ ] Longer video support (medium/long reliability improvements)
+
+## Priority 7: Small UI improvements
+- [ ] Random video button (takes user to a random video)
+- [ ] Search visible on both My Videos and Community tabs
 
 ## Baseline Eval Results (2026-03-22)
 - Plan avg: 8.3/10 (plans are solid)

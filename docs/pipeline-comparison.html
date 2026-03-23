@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curiso Pipeline Comparison</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700&family=DM+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0a0a0f;
+    color: #e8e6e3;
+    padding: 48px 32px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: #6b6b76;
+    margin-bottom: 48px;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* Pipeline sections */
+  .pipeline {
+    background: #111118;
+    border: 1px solid #1e1e2a;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pipeline::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .pipeline.current::before { background: linear-gradient(90deg, #f59e0b, #f59e0b00); }
+  .pipeline.enhanced::before { background: linear-gradient(90deg, #10b981, #10b98100); }
+
+  .pipeline-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .pipeline-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .current .pipeline-badge { background: #f59e0b18; color: #f59e0b; border: 1px solid #f59e0b30; }
+  .enhanced .pipeline-badge { background: #10b98118; color: #10b981; border: 1px solid #10b98130; }
+
+  .pipeline-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .pipeline-meta {
+    margin-left: auto;
+    font-size: 12px;
+    color: #6b6b76;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Flow */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    padding: 4px 0;
+  }
+
+  .step {
+    flex-shrink: 0;
+    min-width: 140px;
+    background: #181822;
+    border: 1px solid #252535;
+    border-radius: 10px;
+    padding: 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .step-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #4a4a58;
+    margin-bottom: 6px;
+  }
+
+  .step-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .step-detail {
+    font-size: 11px;
+    color: #6b6b76;
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  .step-icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .arrow {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    color: #333345;
+    font-size: 18px;
+  }
+
+  /* Enhanced inner loop */
+  .loop-container {
+    flex-shrink: 0;
+    min-width: 380px;
+    border: 1.5px dashed #10b98140;
+    border-radius: 12px;
+    padding: 16px;
+    background: #10b98108;
+    position: relative;
+  }
+
+  .loop-label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: #111118;
+    padding: 2px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #10b981;
+    border-radius: 4px;
+    border: 1px solid #10b98130;
+  }
+
+  .loop-sublabel {
+    font-size: 10px;
+    color: #10b98180;
+    margin-bottom: 12px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .loop-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .loop-step {
+    flex-shrink: 0;
+    background: #1a2a25;
+    border: 1px solid #10b98125;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-width: 90px;
+  }
+
+  .loop-step .step-name { font-size: 11px; }
+  .loop-step .step-detail { font-size: 10px; }
+
+  .loop-arrow {
+    flex-shrink: 0;
+    padding: 0 4px;
+    color: #10b98150;
+    font-size: 14px;
+  }
+
+  .loop-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+    gap: 6px;
+    font-size: 10px;
+    color: #10b98160;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .loop-back svg { width: 14px; height: 14px; color: #10b98160; }
+
+  /* Comparison table */
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: #1e1e2a;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 40px;
+  }
+
+  .comp-cell {
+    background: #111118;
+    padding: 14px 18px;
+    font-size: 13px;
+  }
+
+  .comp-cell.header {
+    font-weight: 600;
+    color: #6b6b76;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .comp-cell.label {
+    color: #8b8b96;
+    font-size: 12px;
+  }
+
+  .comp-cell.current-val { color: #f59e0b; }
+  .comp-cell.enhanced-val { color: #10b981; }
+
+  /* Use case boxes */
+  .use-cases {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 32px;
+  }
+
+  .use-case {
+    background: #111118;
+    border: 1px solid #1e1e2a;
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .use-case h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .use-case ul {
+    list-style: none;
+    font-size: 12px;
+    color: #8b8b96;
+    line-height: 2;
+  }
+
+  .use-case ul li::before {
+    content: '~';
+    margin-right: 8px;
+    color: #4a4a58;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+  }
+
+  .tag.free { background: #10b98118; color: #10b981; }
+  .tag.paid { background: #8b5cf618; color: #8b5cf6; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Curiso Pipeline Architecture</h1>
+  <p class="subtitle">Current fast mode vs. enhanced quality mode with visual inspection loop</p>
+
+  <!-- Current Pipeline -->
+  <div class="pipeline current">
+    <div class="pipeline-header">
+      <span class="pipeline-badge">Current</span>
+      <span class="pipeline-title">Fast Mode</span>
+      <span class="pipeline-meta">~5 min &bull; 1 API call for codegen &bull; short videos</span>
+    </div>
+    <div class="flow">
+      <div class="step">
+        <div class="step-icon">📝</div>
+        <div class="step-num">01</div>
+        <div class="step-name">Plan</div>
+        <div class="step-detail">Claude plans scenes from topic prompt</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-icon">🎙</div>
+        <div class="step-num">02</div>
+        <div class="step-name">Voice</div>
+        <div class="step-detail">ElevenLabs TTS, get exact durations</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-icon">💻</div>
+        <div class="step-num">03</div>
+        <div class="step-name">Codegen</div>
+        <div class="step-detail">One API call generates ALL scenes in one file</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-icon">🎬</div>
+        <div class="step-num">04</div>
+        <div class="step-name">Render</div>
+        <div class="step-detail">Manim renders. Retry on crash (max 3)</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-icon">🔗</div>
+        <div class="step-num">05</div>
+        <div class="step-name">Assemble</div>
+        <div class="step-detail">FFmpeg syncs video + audio, concatenates</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enhanced Pipeline -->
+  <div class="pipeline enhanced">
+    <div class="pipeline-header">
+      <span class="pipeline-badge">Enhanced</span>
+      <span class="pipeline-title">Quality Mode</span>
+      <span class="pipeline-meta">~15-25 min &bull; per-scene iteration &bull; long videos + papers</span>
+    </div>
+    <div class="flow">
+      <div class="step">
+        <div class="step-icon">📄</div>
+        <div class="step-num">01</div>
+        <div class="step-name">Input</div>
+        <div class="step-detail">Topic prompt OR uploaded research paper (PDF)</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-icon">📝</div>
+        <div class="step-num">02</div>
+        <div class="step-name">Plan</div>
+        <div class="step-detail">10-20 scenes for 5-10 min video</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+
+      <!-- Inner quality loop -->
+      <div class="loop-container">
+        <div class="loop-label">Per-scene quality loop &times; N scenes (parallel)</div>
+        <div class="loop-sublabel">Each scene runs independently. Failed scenes don't block others.</div>
+        <div class="loop-flow">
+          <div class="loop-step">
+            <div class="step-name">Code</div>
+            <div class="step-detail">Write scene_XX.py (standalone file)</div>
+          </div>
+          <div class="loop-arrow">&rarr;</div>
+          <div class="loop-step">
+            <div class="step-name">Render</div>
+            <div class="step-detail">Low-quality preview (-ql)</div>
+          </div>
+          <div class="loop-arrow">&rarr;</div>
+          <div class="loop-step">
+            <div class="step-name">Inspect</div>
+            <div class="step-detail">Extract frames, Claude checks visuals</div>
+          </div>
+          <div class="loop-arrow">&rarr;</div>
+          <div class="loop-step">
+            <div class="step-name">Pass?</div>
+            <div class="step-detail">Quality &ge; threshold &rarr; final render</div>
+          </div>
+        </div>
+        <div class="loop-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+          Quality too low? Fix issues and re-render (max 3 iterations)
+        </div>
+      </div>
+
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-icon">🎙</div>
+        <div class="step-num">04</div>
+        <div class="step-name">Voice</div>
+        <div class="step-detail">Audio LAST (only after visuals are locked)</div>
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-icon">🔗</div>
+        <div class="step-num">05</div>
+        <div class="step-name">Assemble</div>
+        <div class="step-detail">Sync + concat + subtitles</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison -->
+  <div class="comparison">
+    <div class="comp-cell header"></div>
+    <div class="comp-cell header">Fast mode</div>
+    <div class="comp-cell header">Quality mode</div>
+
+    <div class="comp-cell label">Scene files</div>
+    <div class="comp-cell current-val">One scenes.py (all scenes)</div>
+    <div class="comp-cell enhanced-val">One file per scene (independent)</div>
+
+    <div class="comp-cell label">Quality check</div>
+    <div class="comp-cell current-val">None (retry on crash only)</div>
+    <div class="comp-cell enhanced-val">Visual inspection per scene</div>
+
+    <div class="comp-cell label">Audio timing</div>
+    <div class="comp-cell current-val">Audio-first (animation fits to audio)</div>
+    <div class="comp-cell enhanced-val">Visuals-first (audio fits to animation)</div>
+
+    <div class="comp-cell label">Parallelism</div>
+    <div class="comp-cell current-val">Sequential rendering</div>
+    <div class="comp-cell enhanced-val">Parallel per-scene agents</div>
+
+    <div class="comp-cell label">Time</div>
+    <div class="comp-cell current-val">~5 minutes</div>
+    <div class="comp-cell enhanced-val">~15-25 minutes</div>
+
+    <div class="comp-cell label">Best for</div>
+    <div class="comp-cell current-val">Quick short explainers (60-90s)</div>
+    <div class="comp-cell enhanced-val">Long videos, papers, premium quality</div>
+  </div>
+
+  <!-- Use cases -->
+  <div class="use-cases">
+    <div class="use-case">
+      <h3>Fast Mode <span class="tag free">free tier</span></h3>
+      <ul>
+        <li>Short topic explainers (60-90 seconds)</li>
+        <li>"Explain the Monty Hall problem"</li>
+        <li>Quick curiosity-driven videos</li>
+        <li>Current pipeline, unchanged</li>
+      </ul>
+    </div>
+    <div class="use-case">
+      <h3>Quality Mode <span class="tag paid">$20/mo</span></h3>
+      <ul>
+        <li>Research paper &rarr; 5-10 min video</li>
+        <li>Medium/long educational deep dives</li>
+        <li>Per-scene visual quality iteration</li>
+        <li>Web search for cutting-edge topics</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>

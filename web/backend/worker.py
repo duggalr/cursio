@@ -142,6 +142,7 @@ def run_pipeline(job_id: str) -> None:
     duration: str = job.get("duration_profile", "short")
     user_id: str = job["user_id"]
     use_research: bool = job.get("use_research", False)
+    quality_mode: bool = job.get("quality_mode", False)
 
     try:
         # ── Stage 1: Research + Planning ─────────────────────────────
@@ -174,103 +175,122 @@ def run_pipeline(job_id: str) -> None:
 
         num_scenes = len(plan["scenes"])
 
-        # ── Stage 2: Voiceover (audio-first for timing) ──────────────
-        _update_job(
-            job_id,
-            status="voiceover",
-            progress_message="Generating voiceover audio...",
-        )
+        if quality_mode:
+            # ── Quality Mode Pipeline ──────────────────────────────
+            from core.quality_pipeline import run_quality_pipeline
 
-        audio_files: list[Path] = []
-        durations: list[float] = []
+            _update_job(job_id, status="generating", progress_message="Quality mode: generating scenes...")
 
-        for idx, scene in enumerate(plan["scenes"], start=1):
-            _update_job(
-                job_id,
-                progress_message=f"Generating voiceover for scene {idx} of {num_scenes}...",
-            )
-            audio_path = out_dir / f"scene_{idx:02d}.mp3"
-            generate_voice(scene["narration"], audio_path)
-            dur = get_audio_duration(audio_path)
-            audio_files.append(audio_path)
-            durations.append(dur)
-
-        # ── Stage 3: Code generation (with exact audio durations) ───
-        _update_job(
-            job_id,
-            status="generating",
-            progress_message=f"Generating animation code for {num_scenes} scenes...",
-        )
-        code = generate_manim_code(plan, scene_durations=durations)
-        code_path = out_dir / "scenes.py"
-        code_path.write_text(code)
-
-        scene_names = get_scene_names(code)
-        if not scene_names:
-            raise RuntimeError("No Scene classes found in generated code")
-
-        # ── Stage 4: Rendering ──────────────────────────────────────
-        _update_job(
-            job_id,
-            status="rendering",
-            progress_message=f"Rendering scene 1 of {len(scene_names)}...",
-        )
-
-        rendered_videos: list[Path] = []
-        current_code = code
-
-        for idx, scene_name in enumerate(scene_names, start=1):
-            _update_job(
-                job_id,
-                progress_message=f"Rendering scene {idx} of {len(scene_names)}...",
-            )
-            video_path, current_code = render_scene(
-                code=current_code,
-                scene_name=scene_name,
+            result = run_quality_pipeline(
+                plan=plan,
                 output_dir=out_dir,
-                code_path=code_path,
-                preview=False,
-            )
-            if video_path:
-                rendered_videos.append(video_path)
-
-        if not rendered_videos:
-            raise RuntimeError("No scenes rendered successfully")
-
-        # Fail if less than half the scenes rendered — don't publish a broken video
-        if len(rendered_videos) < len(scene_names) / 2:
-            raise RuntimeError(
-                f"Only {len(rendered_videos)} of {len(scene_names)} scenes rendered. "
-                f"Aborting to avoid publishing an incomplete video."
+                no_voice=False,
+                on_progress=lambda msg: _update_job(job_id, progress_message=msg),
             )
 
-        # Save final (possibly patched) code
-        code_path.write_text(current_code)
-
-        # ── Stage 5: Assembly ────────────────────────────────────────
-        _update_job(
-            job_id,
-            status="assembling",
-            progress_message="Assembling final video...",
-        )
-
-        combined_scenes: list[Path] = []
-        for idx, (video, audio) in enumerate(
-            zip(rendered_videos, audio_files), start=1
-        ):
+            # Use the adjusted narrations for the video record
+            full_narration = "\n\n".join(result["narrations"])
+            scene_videos = result["scene_videos"]
+            final_path = result["final_path"]
+            durations = result["scene_durations"]
+        else:
+            # ── Stage 2: Voiceover (audio-first for timing) ──────────────
             _update_job(
                 job_id,
-                progress_message=f"Combining scene {idx} video and audio...",
+                status="voiceover",
+                progress_message="Generating voiceover audio...",
             )
-            combined_path = out_dir / f"combined_{idx:02d}.mp4"
-            combine_scene(video, audio, combined_path)
-            combined_scenes.append(combined_path)
 
-        final_path = out_dir / "final.mp4"
-        if len(combined_scenes) == 1:
-            combined_scenes[0].rename(final_path)
-        else:
-            concatenate_scenes(combined_scenes, final_path)
+            audio_files: list[Path] = []
+            durations: list[float] = []
+
+            for idx, scene in enumerate(plan["scenes"], start=1):
+                _update_job(
+                    job_id,
+                    progress_message=f"Generating voiceover for scene {idx} of {num_scenes}...",
+                )
+                audio_path = out_dir / f"scene_{idx:02d}.mp3"
+                generate_voice(scene["narration"], audio_path)
+                dur = get_audio_duration(audio_path)
+                audio_files.append(audio_path)
+                durations.append(dur)
+
+            # ── Stage 3: Code generation (with exact audio durations) ───
+            _update_job(
+                job_id,
+                status="generating",
+                progress_message=f"Generating animation code for {num_scenes} scenes...",
+            )
+            code = generate_manim_code(plan, scene_durations=durations)
+            code_path = out_dir / "scenes.py"
+            code_path.write_text(code)
+
+            scene_names = get_scene_names(code)
+            if not scene_names:
+                raise RuntimeError("No Scene classes found in generated code")
+
+            # ── Stage 4: Rendering ──────────────────────────────────────
+            _update_job(
+                job_id,
+                status="rendering",
+                progress_message=f"Rendering scene 1 of {len(scene_names)}...",
+            )
+
+            rendered_videos: list[Path] = []
+            current_code = code
+
+            for idx, scene_name in enumerate(scene_names, start=1):
+                _update_job(
+                    job_id,
+                    progress_message=f"Rendering scene {idx} of {len(scene_names)}...",
+                )
+                video_path, current_code = render_scene(
+                    code=current_code,
+                    scene_name=scene_name,
+                    output_dir=out_dir,
+                    code_path=code_path,
+                    preview=False,
+                )
+                if video_path:
+                    rendered_videos.append(video_path)
+
+            if not rendered_videos:
+                raise RuntimeError("No scenes rendered successfully")
+
+            # Fail if less than half the scenes rendered — don't publish a broken video
+            if len(rendered_videos) < len(scene_names) / 2:
+                raise RuntimeError(
+                    f"Only {len(rendered_videos)} of {len(scene_names)} scenes rendered. "
+                    f"Aborting to avoid publishing an incomplete video."
+                )
+
+            # Save final (possibly patched) code
+            code_path.write_text(current_code)
+
+            # ── Stage 5: Assembly ────────────────────────────────────────
+            _update_job(
+                job_id,
+                status="assembling",
+                progress_message="Assembling final video...",
+            )
+
+            combined_scenes: list[Path] = []
+            for idx, (video, audio) in enumerate(
+                zip(rendered_videos, audio_files), start=1
+            ):
+                _update_job(
+                    job_id,
+                    progress_message=f"Combining scene {idx} video and audio...",
+                )
+                combined_path = out_dir / f"combined_{idx:02d}.mp4"
+                combine_scene(video, audio, combined_path)
+                combined_scenes.append(combined_path)
+
+            final_path = out_dir / "final.mp4"
+            if len(combined_scenes) == 1:
+                combined_scenes[0].rename(final_path)
+            else:
+                concatenate_scenes(combined_scenes, final_path)
 
         # ── Generate thumbnail ──────────────────────────────────────
         thumbnail_path = out_dir / "thumbnail.jpg"
@@ -338,11 +358,12 @@ def run_pipeline(job_id: str) -> None:
         # Compute video duration from assembled durations
         total_duration = sum(durations)
 
-        # Build narration text for the video record
-        successful_scenes = plan["scenes"][:len(rendered_videos)]
-        full_narration = "\n\n".join(
-            scene["narration"] for scene in successful_scenes
-        )
+        # Build narration text for the video record (skip if quality mode already set it)
+        if not quality_mode:
+            successful_scenes = plan["scenes"][:len(rendered_videos)]
+            full_narration = "\n\n".join(
+                scene["narration"] for scene in successful_scenes
+            )
 
         # ── Create videos row ────────────────────────────────────────
         video_row = {

@@ -207,3 +207,17 @@ def test_generate_request_with_research():
     from web.backend.models import GenerateRequest
     r = GenerateRequest(topic="test", use_research=True)
     assert r.use_research is True
+
+
+def test_generate_request_quality_mode_default():
+    """GenerateRequest defaults quality_mode to False."""
+    from web.backend.models import GenerateRequest
+    r = GenerateRequest(topic="test")
+    assert r.quality_mode is False
+
+
+def test_generate_request_quality_mode_true():
+    """GenerateRequest accepts quality_mode=True."""
+    from web.backend.models import GenerateRequest
+    r = GenerateRequest(topic="test", quality_mode=True)
+    assert r.quality_mode is True

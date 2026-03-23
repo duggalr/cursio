@@ -19,6 +19,7 @@ class GenerateRequest(BaseModel):
     topic: str
     duration: DurationProfile = DurationProfile.short
     use_research: bool = False
+    quality_mode: bool = False
 
 
 class GenerateResponse(BaseModel):

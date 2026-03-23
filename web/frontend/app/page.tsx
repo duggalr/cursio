@@ -89,6 +89,7 @@ export default function HomePage() {
   const [topic, setTopic] = useState("");
   const [duration, setDuration] = useState("short");
   const [useResearch, setUseResearch] = useState(false);
+  const [qualityMode, setQualityMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [genCount, setGenCount] = useState<number | null>(null);
@@ -332,7 +333,7 @@ export default function HomePage() {
         setAuthModal(true);
         return;
       }
-      const { job_id } = await generateVideo(topic, duration, session.access_token, useResearch);
+      const { job_id } = await generateVideo(topic, duration, session.access_token, useResearch, qualityMode);
       localStorage.setItem("curiso_active_job", job_id);
       setActiveJobId(job_id);
       setJobStatus("planning");
@@ -462,6 +463,32 @@ export default function HomePage() {
                     </span>
                     <span className="hidden text-[10px] sm:inline">
                       (for niche topics, research, or recent events)
+                    </span>
+                  </button>
+
+                  <div className="h-4 w-px bg-[var(--color-border)]" />
+
+                  <button
+                    type="button"
+                    onClick={() => setQualityMode(!qualityMode)}
+                    className="flex items-center gap-2 text-xs text-[var(--color-muted)]"
+                  >
+                    <span
+                      className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+                        qualityMode ? "bg-[var(--color-foreground)]" : "bg-[var(--color-border)]"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3 w-3 rounded-full bg-[var(--color-background)] transition-transform ${
+                          qualityMode ? "translate-x-3.5" : "translate-x-0.5"
+                        }`}
+                      />
+                    </span>
+                    <span className={qualityMode ? "text-[var(--color-foreground)]" : ""}>
+                      Quality mode
+                    </span>
+                    <span className="hidden text-[10px] sm:inline">
+                      (slower, higher quality)
                     </span>
                   </button>
                 </div>
