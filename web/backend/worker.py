@@ -260,7 +260,7 @@ def run_pipeline(job_id: str) -> None:
                 "-shortest", "-pix_fmt", "yuv420p",
                 str(vertical_path),
             ],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=600,
         )
 
         # ── Upload to Supabase Storage ───────────────────────────────
