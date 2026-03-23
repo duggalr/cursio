@@ -108,18 +108,28 @@ def run_pipeline(job_id: str) -> None:
     topic: str = job["topic"]
     duration: str = job.get("duration_profile", "short")
     user_id: str = job["user_id"]
+    use_research: bool = job.get("use_research", False)
 
     try:
         # ── Stage 1: Research + Planning ─────────────────────────────
-        _update_job(job_id, status="planning", progress_message="Researching topic...")
-        research = research_topic(topic)
+        research_context = ""
+        research_sources = None
+
+        if use_research:
+            _update_job(job_id, status="planning", progress_message="Researching topic...")
+            research = research_topic(topic)
+            if research.needed:
+                research_context = research.context
+                research_sources = research.sources
+        else:
+            _update_job(job_id, status="planning", progress_message="Planning scenes...")
 
         _update_job(job_id, progress_message="Planning scenes...")
         plan = plan_scenes(
             topic,
             duration=duration,
-            research_context=research.context if research.needed else "",
-            research_sources=research.sources if research.needed else None,
+            research_context=research_context,
+            research_sources=research_sources,
         )
 
         topic_slug = slugify(plan["topic"])
@@ -315,6 +325,10 @@ def run_pipeline(job_id: str) -> None:
             "video_duration_seconds": total_duration,
             "view_count": 0,
         }
+
+        # Include research sources if web search was used
+        if use_research and research_sources:
+            video_row["sources"] = json.dumps(research_sources)
         video_insert = supabase.table("videos").insert(video_row).execute()
         video_id: str = video_insert.data[0]["id"]
 

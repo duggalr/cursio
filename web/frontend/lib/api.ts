@@ -1,5 +1,10 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+export interface VideoSource {
+  title: string;
+  url: string;
+}
+
 export interface Video {
   id: string;
   title: string;
@@ -10,6 +15,7 @@ export interface Video {
   vertical_video_url: string | null;
   narration_text: string | null;
   like_count: number;
+  sources: VideoSource[] | null;
   created_at: string;
 }
 
@@ -63,7 +69,8 @@ export async function fetchVideo(id: string): Promise<Video> {
 export async function generateVideo(
   topic: string,
   duration: string,
-  token: string
+  token: string,
+  useResearch: boolean = false
 ): Promise<{ job_id: string }> {
   const res = await fetch(`${API_URL}/api/generate`, {
     method: "POST",
@@ -71,7 +78,7 @@ export async function generateVideo(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ topic, duration }),
+    body: JSON.stringify({ topic, duration, use_research: useResearch }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

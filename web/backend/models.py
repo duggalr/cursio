@@ -18,6 +18,7 @@ class DurationProfile(str, Enum):
 class GenerateRequest(BaseModel):
     topic: str
     duration: DurationProfile = DurationProfile.short
+    use_research: bool = False
 
 
 class GenerateResponse(BaseModel):
@@ -47,6 +48,7 @@ class Video(BaseModel):
     video_duration_seconds: float | None = None
     view_count: int = 0
     like_count: int = 0
+    sources: list[dict] | None = None
     created_at: str
 
 
