@@ -31,3 +31,7 @@ business_goals/
 # Tools
 .superpowers/
 .vercel
+
+# Eval
+eval/results
+eval/runs
