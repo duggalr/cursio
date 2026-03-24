@@ -19,7 +19,7 @@
 - [ ] Visual quality feedback loop (render → inspect frames → regenerate if bad)
 - [ ] Split scenes into individual files for independent iteration
 
-## Priority 3: Research Paper → Video (NEXT)
+## Priority 3: Research Paper → Video (NEXT) 
 - [ ] Study Eve's CLAUDE.md approach to understand quality patterns
 - [ ] PDF upload on frontend + text extraction
 - [ ] Claude summarizes paper into scene plan (target 5-10 min)
@@ -45,6 +45,9 @@
 ## Priority 7: Small UI improvements
 - [ ] Random video button (takes user to a random video)
 - [ ] Search visible on both My Videos and Community tabs
+- [ ] Exposing an API version of this where I add my video prompt / topic in text and call the API and it generates and returns a link to the generated video?
+    - not sure how exactly this would work since video generation job is long but would be cool and useful
+        - also having it accept params, having web_search as a metadata that is enabled/disabled all would be very nice
 
 ## Baseline Eval Results (2026-03-22)
 - Plan avg: 8.3/10 (plans are solid)

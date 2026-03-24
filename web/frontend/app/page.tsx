@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import VideoCard from "@/components/VideoCard";
 import AuthModal from "@/components/AuthModal";
-import { fetchVideos, fetchTags, fetchJobStatus, fetchActiveJob, generateVideo, type Video, type TagWithCount } from "@/lib/api";
+import { fetchVideos, fetchTags, fetchJobStatus, fetchActiveJob, generateVideo, generateFromPaper, type Video, type TagWithCount } from "@/lib/api";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
 const allTopics = [
@@ -86,6 +86,8 @@ export default function HomePage() {
   };
 
   // Generate state
+  const [inputMode, setInputMode] = useState<"topic" | "paper">("topic");
+  const [paperFile, setPaperFile] = useState<File | null>(null);
   const [topic, setTopic] = useState("");
   const [duration, setDuration] = useState("short");
   const [useResearch, setUseResearch] = useState(false);
@@ -312,7 +314,10 @@ export default function HomePage() {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!topic.trim()) return;
+
+    // Validate input based on mode
+    if (inputMode === "topic" && !topic.trim()) return;
+    if (inputMode === "paper" && !paperFile) return;
 
     if (!user) {
       setAuthMode("signup");
@@ -333,11 +338,21 @@ export default function HomePage() {
         setAuthModal(true);
         return;
       }
-      const { job_id } = await generateVideo(topic, duration, session.access_token, useResearch, qualityMode);
+
+      let job_id: string;
+      if (inputMode === "paper" && paperFile) {
+        const result = await generateFromPaper(paperFile, duration, session.access_token);
+        job_id = result.job_id;
+      } else {
+        const result = await generateVideo(topic, duration, session.access_token, useResearch, qualityMode);
+        job_id = result.job_id;
+      }
+
       localStorage.setItem("curiso_active_job", job_id);
       setActiveJobId(job_id);
       setJobStatus("planning");
       setTopic("");
+      setPaperFile(null);
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : "Failed to start generation");
     } finally {
@@ -386,36 +401,114 @@ export default function HomePage() {
             transition={{ delay: 0.15, duration: 0.5, ease: "easeOut" }}
           >
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow focus-within:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              <textarea
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                placeholder="What are you curious about?"
-                rows={2}
-                className="w-full resize-none bg-transparent text-sm text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none"
-              />
-              {!topic.trim() && suggestedTopics.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1 pb-2">
-                  {suggestedTopics.map((s) => (
-                    <button
-                      key={s.label}
-                      type="button"
-                      onClick={() => setTopic(s.prompt)}
-                      className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={refreshTopics}
-                    className="rounded-full p-1.5 text-[var(--color-muted)] transition-colors hover:text-[var(--color-foreground)]"
-                    title="Show different topics"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5.1 15A7.002 7.002 0 0019 12M18.9 9A7.002 7.002 0 005 12" />
-                    </svg>
-                  </button>
+              <div className="mb-3 flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setInputMode("topic")}
+                  className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                    inputMode === "topic"
+                      ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                  }`}
+                >
+                  Topic
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputMode("paper")}
+                  className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                    inputMode === "paper"
+                      ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                  }`}
+                >
+                  Research Paper
+                </button>
+              </div>
+              {inputMode === "paper" ? (
+                <div
+                  className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[var(--color-border)] p-6 transition-colors hover:border-[var(--color-muted)]"
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer.files[0];
+                    if (file?.type === "application/pdf") setPaperFile(file);
+                  }}
+                >
+                  {paperFile ? (
+                    <div className="flex items-center gap-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[var(--color-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-[var(--color-foreground)]">{paperFile.name}</p>
+                        <p className="text-xs text-[var(--color-muted)]">{(paperFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPaperFile(null)}
+                        className="ml-2 text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="mb-2 h-8 w-8 text-[var(--color-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-sm text-[var(--color-muted)]">Drop a PDF here or</p>
+                      <label className="mt-1 cursor-pointer text-sm font-medium text-[var(--color-foreground)] underline">
+                        browse files
+                        <input
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setPaperFile(file);
+                          }}
+                        />
+                      </label>
+                      <p className="mt-2 text-[10px] text-[var(--color-muted)]">PDF only, max 20MB</p>
+                    </>
+                  )}
                 </div>
+              ) : (
+                <>
+                  <textarea
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    placeholder="What are you curious about?"
+                    rows={2}
+                    className="w-full resize-none bg-transparent text-sm text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none"
+                  />
+                  {!topic.trim() && suggestedTopics.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 pb-2">
+                      {suggestedTopics.map((s) => (
+                        <button
+                          key={s.label}
+                          type="button"
+                          onClick={() => setTopic(s.prompt)}
+                          className="rounded-full border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={refreshTopics}
+                        className="rounded-full p-1.5 text-[var(--color-muted)] transition-colors hover:text-[var(--color-foreground)]"
+                        title="Show different topics"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M5.1 15A7.002 7.002 0 0019 12M18.9 9A7.002 7.002 0 005 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-3">
@@ -494,7 +587,7 @@ export default function HomePage() {
                 </div>
                 <button
                   type="submit"
-                  disabled={submitting || !topic.trim() || (!!activeJobId && jobStatus !== "completed" && jobStatus !== "failed")}
+                  disabled={submitting || (inputMode === "topic" ? !topic.trim() : !paperFile) || (!!activeJobId && jobStatus !== "completed" && jobStatus !== "failed")}
                   className="rounded-lg bg-[var(--color-foreground)] px-4 py-1.5 text-xs font-medium text-[var(--color-background)] transition-opacity disabled:opacity-40"
                 >
                   {submitting ? "Starting..." : "Generate"}
@@ -727,26 +820,65 @@ export default function HomePage() {
 
         {/* Video Grid */}
         <div className="relative min-h-[200px]">
-          {/* Refreshing overlay spinner */}
-          <AnimatePresence>
-            {refreshing && (
-              <motion.div
-                className="absolute inset-0 z-10 flex items-start justify-center pt-20"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-foreground)]" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className={`transition-opacity duration-200 ${refreshing ? "opacity-40" : "opacity-100"}`}>
-            {initialLoad ? (
+          {initialLoad ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="animate-pulse overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+                  <div className="aspect-video bg-[var(--color-surface-hover)]" />
+                  <div className="space-y-2 p-3.5">
+                    <div className="h-3.5 w-3/4 rounded bg-[var(--color-surface-hover)]" />
+                    <div className="h-3 w-1/2 rounded bg-[var(--color-surface-hover)]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : videos.length === 0 ? (
+            <motion.div
+              className="py-20 text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              {tab === "my_videos" ? (
+                <div>
+                  <p className="mb-2 text-sm font-medium text-[var(--color-foreground)]">
+                    You haven't generated any videos yet.
+                  </p>
+                  <p className="mb-5 text-xs text-[var(--color-muted)]">
+                    Enter a topic above and create your first video. It's free and takes about 5 minutes.
+                  </p>
+                  <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                    className="inline-block rounded-lg bg-[var(--color-foreground)] px-5 py-2 text-sm font-medium text-[var(--color-background)] transition-opacity hover:opacity-80"
+                  >
+                    Generate your first video
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-[var(--color-muted)]">
+                  {search ? `No videos found for "${search}"` : "No videos yet. Generate one above!"}
+                </p>
+              )}
+            </motion.div>
+          ) : (
+            <>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="animate-pulse overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+                {videos.map((video) => (
+                  <motion.div
+                    key={video.id}
+                    className="h-full"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    layout
+                  >
+                    <VideoCard video={video} />
+                  </motion.div>
+                ))}
+
+                {/* Skeleton placeholders while loading more */}
+                {loadingMore && Array.from({ length: 3 }).map((_, i) => (
+                  <div key={`skeleton-${i}`} className="animate-pulse overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
                     <div className="aspect-video bg-[var(--color-surface-hover)]" />
                     <div className="space-y-2 p-3.5">
                       <div className="h-3.5 w-3/4 rounded bg-[var(--color-surface-hover)]" />
@@ -755,62 +887,15 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
-            ) : videos.length === 0 ? (
-              <motion.div
-                className="py-20 text-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                {tab === "my_videos" ? (
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-[var(--color-foreground)]">
-                      You haven't generated any videos yet.
-                    </p>
-                    <p className="mb-5 text-xs text-[var(--color-muted)]">
-                      Enter a topic above and create your first video. It's free and takes about 5 minutes.
-                    </p>
-                    <button
-                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                      className="inline-block rounded-lg bg-[var(--color-foreground)] px-5 py-2 text-sm font-medium text-[var(--color-background)] transition-opacity hover:opacity-80"
-                    >
-                      Generate your first video
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-sm text-[var(--color-muted)]">
-                    {search ? `No videos found for "${search}"` : "No videos yet. Generate one above!"}
-                  </p>
-                )}
-              </motion.div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {videos.map((video, i) => (
-                    <motion.div
-                      key={video.id}
-                      className="h-full"
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
-                      transition={{ delay: Math.min(0.1 + (i % PAGE_SIZE) * 0.06, 0.5), duration: 0.4, ease: "easeOut" }}
-                    >
-                      <VideoCard video={video} />
-                    </motion.div>
-                  ))}
-                </div>
 
-                {/* Infinite scroll trigger */}
-                <div ref={loadMoreRef} className="flex justify-center py-8">
-                  {loadingMore && (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-foreground)]" />
-                  )}
-                  {!hasMore && videos.length > PAGE_SIZE && (
-                    <p className="text-xs text-[var(--color-muted)]">You've seen all videos</p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+              {/* Infinite scroll trigger */}
+              <div ref={loadMoreRef} className="py-6">
+                {!hasMore && videos.length > PAGE_SIZE && (
+                  <p className="text-center text-xs text-[var(--color-muted)]">You've seen all videos</p>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

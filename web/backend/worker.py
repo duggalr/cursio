@@ -143,6 +143,8 @@ def run_pipeline(job_id: str) -> None:
     user_id: str = job["user_id"]
     use_research: bool = job.get("use_research", False)
     quality_mode: bool = job.get("quality_mode", False)
+    paper_text: str | None = job.get("paper_text")
+    paper_title: str | None = job.get("paper_title")
 
     try:
         # ── Stage 1: Research + Planning ─────────────────────────────
@@ -158,13 +160,18 @@ def run_pipeline(job_id: str) -> None:
         else:
             _update_job(job_id, status="planning", progress_message="Planning scenes...")
 
-        _update_job(job_id, progress_message="Planning scenes...")
-        plan = plan_scenes(
-            topic,
-            duration=duration,
-            research_context=research_context,
-            research_sources=research_sources,
-        )
+        if paper_text:
+            _update_job(job_id, status="planning", progress_message="Analyzing research paper...")
+            from core.paper import plan_paper_video
+            plan = plan_paper_video(paper_text, paper_title=paper_title or topic, duration=duration)
+        else:
+            _update_job(job_id, progress_message="Planning scenes...")
+            plan = plan_scenes(
+                topic,
+                duration=duration,
+                research_context=research_context,
+                research_sources=research_sources,
+            )
 
         topic_slug = slugify(plan["topic"])
         out_dir = OUTPUT_ROOT / f"web_{job_id}_{topic_slug}"

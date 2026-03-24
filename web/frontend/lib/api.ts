@@ -132,6 +132,29 @@ export async function unlikeVideo(videoId: string, token: string): Promise<void>
   }
 }
 
+export async function generateFromPaper(
+  file: File,
+  duration: string,
+  token: string,
+): Promise<{ job_id: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("duration", duration);
+
+  const res = await fetch(`${API_URL}/api/generate-from-paper`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to upload paper: ${res.statusText}`);
+  }
+  return res.json();
+}
+
 export async function fetchActiveJob(token: string): Promise<Job | null> {
   const res = await fetch(`${API_URL}/api/jobs/active/me`, {
     headers: { Authorization: `Bearer ${token}` },
