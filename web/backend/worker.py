@@ -121,6 +121,42 @@ def _update_job(job_id: str, **fields) -> None:
     supabase.table("generation_jobs").update(fields).eq("id", job_id).execute()
 
 
+def _upload_to_storage(
+    bucket: str,
+    storage_path: str,
+    local_path: Path,
+    content_type: str,
+    max_retries: int = 3,
+) -> str:
+    """Upload a file to Supabase Storage with retry logic.
+
+    Large files (10MB+ videos) can fail with connection resets.
+    Retries with exponential backoff to handle transient failures.
+
+    Returns the public URL.
+    """
+    import time as _time
+
+    supabase = get_supabase()
+    for attempt in range(max_retries):
+        try:
+            with open(local_path, "rb") as f:
+                supabase.storage.from_(bucket).upload(
+                    storage_path,
+                    f,
+                    file_options={"content-type": content_type},
+                )
+            return supabase.storage.from_(bucket).get_public_url(storage_path)
+        except Exception as exc:
+            if attempt < max_retries - 1:
+                wait = 2 ** (attempt + 1)  # 2s, 4s, 8s
+                print(f"    Upload failed (attempt {attempt + 1}/{max_retries}): {exc}")
+                print(f"    Retrying in {wait}s...")
+                _time.sleep(wait)
+            else:
+                raise
+
+
 def run_pipeline(job_id: str) -> None:
     """Execute the full video generation pipeline for a queued job.
 
@@ -329,38 +365,24 @@ def run_pipeline(job_id: str) -> None:
             progress_message="Uploading video...",
         )
 
-        storage_path = f"videos/{job_id}/final.mp4"
-        with open(final_path, "rb") as f:
-            supabase.storage.from_("generated_videos").upload(
-                storage_path,
-                f,
-                file_options={"content-type": "video/mp4"},
-            )
-
-        video_url = supabase.storage.from_("generated_videos").get_public_url(storage_path)
+        video_url = _upload_to_storage(
+            "generated_videos", f"videos/{job_id}/final.mp4",
+            final_path, "video/mp4",
+        )
 
         # Upload vertical version
         vertical_video_url = None
         if vertical_path.exists():
-            vert_storage_path = f"videos/{job_id}/vertical.mp4"
-            with open(vertical_path, "rb") as f:
-                supabase.storage.from_("generated_videos").upload(
-                    vert_storage_path,
-                    f,
-                    file_options={"content-type": "video/mp4"},
-                )
-            vertical_video_url = supabase.storage.from_("generated_videos").get_public_url(vert_storage_path)
-
-        # Upload thumbnail
-        thumb_storage_path = f"videos/{job_id}/thumbnail.jpg"
-        with open(thumbnail_path, "rb") as f:
-            supabase.storage.from_("generated_videos").upload(
-                thumb_storage_path,
-                f,
-                file_options={"content-type": "image/jpeg"},
+            vertical_video_url = _upload_to_storage(
+                "generated_videos", f"videos/{job_id}/vertical.mp4",
+                vertical_path, "video/mp4",
             )
 
-        thumbnail_url = supabase.storage.from_("generated_videos").get_public_url(thumb_storage_path)
+        # Upload thumbnail
+        thumbnail_url = _upload_to_storage(
+            "generated_videos", f"videos/{job_id}/thumbnail.jpg",
+            thumbnail_path, "image/jpeg",
+        )
 
         # Compute video duration from assembled durations
         total_duration = sum(durations)

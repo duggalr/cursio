@@ -19,6 +19,7 @@ def generate_voice(
     text: str,
     output_path: Path,
     voice_id: str | None = None,
+    max_retries: int = 3,
 ) -> Path:
     """Generate voiceover audio for a narration string.
 
@@ -26,26 +27,37 @@ def generate_voice(
         text: The narration text to speak.
         output_path: Where to save the .mp3 file.
         voice_id: ElevenLabs voice ID. Uses ELEVENLABS_VOICE_ID env var or default.
+        max_retries: Number of retry attempts on connection failures.
 
     Returns:
         Path to the saved mp3 file.
     """
-    client = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEY"))
+    import time
 
+    client = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEY"))
     voice = voice_id or os.environ.get("ELEVENLABS_VOICE_ID") or DEFAULT_VOICE_ID
 
-    audio_generator = client.text_to_speech.convert(
-        voice_id=voice,
-        text=text,
-        model_id="eleven_multilingual_v2",
-    )
+    for attempt in range(max_retries):
+        try:
+            audio_generator = client.text_to_speech.convert(
+                voice_id=voice,
+                text=text,
+                model_id="eleven_multilingual_v2",
+            )
 
-    # audio_generator yields chunks — write them all to file
-    with open(output_path, "wb") as f:
-        for chunk in audio_generator:
-            f.write(chunk)
+            with open(output_path, "wb") as f:
+                for chunk in audio_generator:
+                    f.write(chunk)
 
-    return output_path
+            return output_path
+        except Exception as exc:
+            if attempt < max_retries - 1:
+                wait = 2 ** (attempt + 1)
+                print(f"  Voice generation failed (attempt {attempt + 1}/{max_retries}): {exc}")
+                print(f"  Retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                raise
 
 
 def get_audio_duration(audio_path: Path) -> float:

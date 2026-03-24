@@ -41,14 +41,21 @@ Animation style:
 Layout (CRITICAL — nothing must be cut off):
   - NEVER place objects at the very edge of the screen
   - Use buff=0.7 minimum when using .to_edge() or .next_to()
-  - Titles: use .to_edge(UP, buff=0.8) — this keeps them well inside the frame, not hugging the top
-  - All content must stay within x=[-6.0, 6.0] and y=[-3.2, 3.2] (safe zone with generous margins)
-  - For long titles, use font_size=36 or smaller and check width with .width property
-  - If a title might be long, scale it: title.scale_to_fit_width(12) to ensure it fits
+  - Titles: use .to_edge(UP, buff=0.8) — keeps them well inside the frame
+  - All content must stay within x=[-6.0, 6.0] and y=[-3.2, 3.2] (safe zone)
+  - For long titles, use font_size=36 or smaller and scale_to_fit_width(12)
   - Center important content using .move_to(ORIGIN)
   - Keep scenes uncluttered — max 4-5 objects visible at once
-  - Axes should use x_length and y_length to control size, typically x_length=8, y_length=5
+  - Axes should use x_length=8, y_length=5 maximum
   - Leave space for labels — don't let graphs touch the edges
+
+  LAYOUT MISTAKES TO AVOID (these are common and WILL fail quality review):
+  - DO NOT place text below y=-3.0 — it WILL be cut off at the bottom
+  - DO NOT stack more than 3 text lines without reducing font_size
+  - When splitting screen (left/right), use x=[-5.5, -0.5] and x=[0.5, 5.5] — leave a gap in the middle
+  - When a scene has a title at top AND content below, title at y=3.0, content centered at y=0, nothing below y=-2.8
+  - ALWAYS call .scale_to_fit_width(5.5) on any VGroup that might be too wide for half-screen layouts
+  - After positioning all objects, mentally check: can ANY object overlap another? If yes, add more buff or reduce sizes
 """
 
 CODEGEN_SYSTEM_PROMPT = f"""You are an expert Manim Community Edition (manimce) programmer. You write clean, working Manim code that renders beautiful 3Blue1Brown-style educational animations.
@@ -209,12 +216,16 @@ def generate_single_scene_code(
     plan: dict,
     scene_index: int,
     model: str = "claude-sonnet-4-20250514",
+    **kwargs,
 ) -> str:
     """Generate standalone Manim code for a single scene.
 
     Unlike generate_manim_code() which creates all scenes in one file,
-    this generates a self-contained file for one scene — enabling
+    this generates a self-contained file for one scene, enabling
     independent rendering and iteration.
+
+    Optional kwargs:
+        target_duration: Exact duration in seconds to target (from audio).
     """
     client = anthropic.Anthropic()
     scene = plan["scenes"][scene_index]
@@ -225,6 +236,19 @@ def generate_single_scene_code(
     if scene_index > 0:
         prev = plan["scenes"][scene_index - 1]
         context += f"\n\nThe previous scene covered: {prev['animation_description']}"
+
+    # Build timing instructions
+    duration = kwargs.get("target_duration")
+    if duration:
+        timing = f"""- CRITICAL TIMING: This scene's audio is exactly {duration:.1f} seconds long. Your animation MUST total {duration:.1f} seconds.
+- Add up all self.play(run_time=X) and self.wait(X) calls to hit exactly {duration:.1f} seconds.
+- Distribute self.wait() calls throughout so visuals stay on screen while the narrator speaks.
+- The narration starts at t=0. Your first visual MUST appear within 0.3 seconds."""
+    else:
+        word_count = len(scene['narration'].split())
+        timing = f"""- The narration has {word_count} words ≈ {word_count / 2.5:.0f} seconds target
+- Make the animation feel natural with generous pacing
+- Use self.wait(1.5-3) between major steps"""
 
     prompt = f"""Generate a SINGLE standalone Manim scene file.
 
@@ -237,10 +261,7 @@ def generate_single_scene_code(
 Requirements:
 - Create exactly ONE Scene class named Scene{scene_num:02d}
 - The file must be fully self-contained (start with `from manim import *`)
-- Make the animation feel natural with generous pacing — DO NOT rush
-- Use self.wait(1.5-3) between major steps so the viewer can absorb each concept
-- Estimate ~2.5 words per second for the narration to guide your timing
-- The narration has {len(scene['narration'].split())} words ≈ {len(scene['narration'].split()) / 2.5:.0f} seconds target
+{timing}
 """
 
     response = client.messages.create(
