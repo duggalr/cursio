@@ -70,6 +70,8 @@ async def list_videos(
     # Sorting
     if sort == "most_liked":
         query = query.order("like_count", desc=True)
+    elif sort == "most_viewed":
+        query = query.order("view_count", desc=True)
     else:
         query = query.order("created_at", desc=True)
 
@@ -124,6 +126,21 @@ async def get_video(slug_or_id: str):
 
     return Video(**video_data)
 
+
+@router.post("/{video_id}/view")
+async def record_view(video_id: str):
+    """Increment view count for a video."""
+    supabase = get_supabase()
+    # Use rpc or raw increment — supabase-py doesn't have atomic increment,
+    # so we read + write (acceptable for view counts)
+    try:
+        result = supabase.table("videos").select("view_count").eq("id", video_id).single().execute()
+        if result.data:
+            current = result.data.get("view_count", 0) or 0
+            supabase.table("videos").update({"view_count": current + 1}).eq("id", video_id).execute()
+    except Exception:
+        pass  # Don't fail on view count errors
+    return {"ok": True}
 
 
 @router.get("/{video_id}/like")

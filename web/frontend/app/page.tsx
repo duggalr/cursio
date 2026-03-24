@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import VideoCard from "@/components/VideoCard";
 import AuthModal from "@/components/AuthModal";
+import { Dice5 } from "lucide-react";
 import { fetchVideos, fetchTags, fetchJobStatus, fetchActiveJob, generateVideo, generateFromPaper, type Video, type TagWithCount } from "@/lib/api";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
@@ -54,6 +55,8 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const [videos, setVideos] = useState<Video[]>([]);
+  const [myVideoCount, setMyVideoCount] = useState<number | null>(null);
+  const [communityTotal, setCommunityTotal] = useState<number | null>(null);
   const [initialLoad, setInitialLoad] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -208,14 +211,24 @@ export default function HomePage() {
       try {
         let query = supabaseRef.current
           .from("videos")
-          .select("id, slug, title, topic, tags, thumbnail_url, video_url, narration_text, created_at, duration_profile")
+          .select("id, slug, title, topic, tags, thumbnail_url, video_url, view_count, narration_text, created_at, duration_profile")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         if (selectedTag) {
           query = query.contains("tags", JSON.stringify([selectedTag]));
         }
         const { data } = await query;
-        setVideos((data || []).map((v: Record<string, unknown>) => ({ ...v, like_count: 0 } as Video)));
+        let filtered = (data || []).map((v: Record<string, unknown>) => ({ ...v, like_count: 0 } as Video));
+        // Client-side search filter for My Videos
+        if (search) {
+          const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+          filtered = filtered.filter((v) =>
+            words.some((w) => v.title.toLowerCase().includes(w) || v.topic.toLowerCase().includes(w))
+          );
+        }
+        setVideos(filtered);
+        // Track total my videos count (before search filter)
+        setMyVideoCount((data || []).length);
         setHasMore(false); // My Videos loads all at once
       } catch {
         setVideos([]);
@@ -241,6 +254,7 @@ export default function HomePage() {
       } else {
         setVideos(data.videos);
       }
+      setCommunityTotal(data.total);
       setHasMore(data.videos.length === PAGE_SIZE && (data.total > pageNum * PAGE_SIZE));
     } catch {
       if (!append) setVideos([]);
@@ -731,7 +745,7 @@ export default function HomePage() {
                       : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                   }`}
                 >
-                  My Videos
+                  My Videos{myVideoCount !== null ? ` (${myVideoCount})` : ""}
                 </button>
               )}
               <button
@@ -742,28 +756,41 @@ export default function HomePage() {
                     : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
                 }`}
               >
-                Community
+                Community{communityTotal !== null ? ` (${communityTotal})` : ""}
+              </button>
+
+              <button
+                onClick={() => {
+                  if (videos.length > 0) {
+                    const random = videos[Math.floor(Math.random() * videos.length)];
+                    router.push(`/video/${random.slug || random.id}`);
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+              >
+                <Dice5 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Random video</span>
               </button>
             </div>
 
-            {tab === "community" && (
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  onChange={(e) => handleSearchInput(e.target.value)}
-                  placeholder="Search..."
-                  className="w-36 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
-                />
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                onChange={(e) => handleSearchInput(e.target.value)}
+                placeholder="Search..."
+                className="w-36 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
+              />
+              {tab === "community" && (
                 <select
                   value={communitySort}
                   onChange={(e) => setCommunitySort(e.target.value as "recent" | "most_liked")}
                   className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs text-[var(--color-muted)] outline-none transition-colors focus:border-[var(--color-muted)]"
                 >
                   <option value="recent">Recent</option>
-                  <option value="most_liked">Most Liked</option>
+                  <option value="most_viewed">Most Viewed</option>
                 </select>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Tag filter pills — single row, horizontally scrollable with arrows */}

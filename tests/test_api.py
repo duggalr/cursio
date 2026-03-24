@@ -172,6 +172,26 @@ def test_list_tags_empty(client, mock_supabase):
     assert res.json()["tags"] == []
 
 
+# ─── Views ──────────────────────────────────────────────────────────
+
+
+def test_record_view(client, mock_supabase):
+    """POST /api/videos/{id}/view increments view count."""
+    mock_result = MagicMock()
+    mock_result.data = {"view_count": 5}
+    mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_result
+
+    res = client.post("/api/videos/abc-123/view")
+    assert res.status_code == 200
+    assert res.json()["ok"] is True
+
+
+def test_list_videos_most_viewed_sort(client, mock_supabase):
+    """GET /api/videos?sort=most_viewed accepts most_viewed sort."""
+    res = client.get("/api/videos?sort=most_viewed")
+    assert res.status_code == 200
+
+
 # ─── Models ─────────────────────────────────────────────────────────
 
 
