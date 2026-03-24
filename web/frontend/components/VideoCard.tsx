@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef } from "react";
 import Link from "next/link";
 import type { Video } from "@/lib/api";
 
@@ -17,16 +18,41 @@ function parseTags(tags: unknown): string[] {
 
 export default function VideoCard({ video }: VideoCardProps) {
   const tags = parseTags(video.tags);
+  const [hovering, setHovering] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    if (!video.video_url) return;
+    // Small delay to avoid flickering on quick mouse passes
+    hoverTimeout.current = setTimeout(() => {
+      setHovering(true);
+      videoRef.current?.play().catch(() => {});
+    }, 400);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    setHovering(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
 
   return (
     <Link href={`/video/${video.slug || video.id}`}>
-      <article className="group flex h-full flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] transition-shadow hover:shadow-sm">
+      <article
+        className="group flex h-full flex-col overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] transition-shadow hover:shadow-sm"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="relative aspect-video w-full overflow-hidden">
           {video.thumbnail_url ? (
             <img
               src={video.thumbnail_url}
               alt={video.title}
-              className="h-full w-full object-cover"
+              className={`h-full w-full object-cover transition-opacity duration-300 ${hovering ? "opacity-0" : "opacity-100"}`}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[var(--color-surface-hover)]">
@@ -35,6 +61,18 @@ export default function VideoCard({ video }: VideoCardProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
+          )}
+          {/* Video preview on hover */}
+          {video.video_url && (
+            <video
+              ref={videoRef}
+              src={video.video_url}
+              muted
+              loop
+              playsInline
+              preload="none"
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${hovering ? "opacity-100" : "opacity-0"}`}
+            />
           )}
         </div>
 
@@ -60,9 +98,10 @@ export default function VideoCard({ video }: VideoCardProps) {
           <div className="mt-auto flex items-center justify-between text-xs text-[var(--color-muted)]">
             <span className="flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              {(video.like_count || 0).toLocaleString()}
+              {(video.view_count || 0).toLocaleString()} views
             </span>
             <span>
               {new Date(video.created_at).toLocaleDateString("en-US", {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { fetchVideo, likeVideo, unlikeVideo, checkIfLiked, type Video } from "@/lib/api";
+import { fetchVideo, likeVideo, unlikeVideo, checkIfLiked, recordView, type Video } from "@/lib/api";
 import AuthModal from "@/components/AuthModal";
 
 function parseTags(tags: unknown): string[] {
@@ -36,6 +36,7 @@ export default function VideoPage() {
         const data = await fetchVideo(slug);
         setVideo(data);
         setLikeCount(data.like_count || 0);
+        recordView(data.id);
 
         const { createClient } = await import("@/lib/supabase");
         const supabase = createClient();

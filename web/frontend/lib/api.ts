@@ -16,6 +16,7 @@ export interface Video {
   vertical_video_url: string | null;
   narration_text: string | null;
   like_count: number;
+  view_count: number;
   sources: VideoSource[] | null;
   tags: string[] | null;
   created_at: string;
@@ -162,6 +163,10 @@ export async function fetchActiveJob(token: string): Promise<Job | null> {
   if (!res.ok) return null;
   const data = await res.json();
   return data || null;
+}
+
+export async function recordView(videoId: string): Promise<void> {
+  await fetch(`${API_URL}/api/videos/${videoId}/view`, { method: "POST" }).catch(() => {});
 }
 
 export async function checkIfLiked(videoId: string, token: string): Promise<boolean> {
