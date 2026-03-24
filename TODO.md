@@ -32,22 +32,24 @@
 - [ ] Audio-last workflow (visuals locked before TTS)
 - [ ] Could be the paid tier differentiator
 
-## Priority 5: Chat Interface
-- [ ] V1: Text chat grounded on video narration + plan (simple Claude API call)
-- [ ] V2: Agent SDK with tools (search transcript, generate follow-up animations, cite timestamps)
-- [ ] Chat box on video detail page
-
-## Priority 6: Continuous Quality
-- [ ] Better voice selection (multiple ElevenLabs voices, auto-select by topic tone)
-- [ ] Improve research pipeline (filter/verify Tavily results before injecting)
-- [ ] Longer video support (medium/long reliability improvements)
-
-## Priority 7: Small UI improvements
+## Priority 5: Small UI improvements
+- [ ] Add number of views a video got and do popular ordering by that, add video preview showing on mouseover 
 - [ ] Random video button (takes user to a random video)
 - [ ] Search visible on both My Videos and Community tabs
 - [ ] Exposing an API version of this where I add my video prompt / topic in text and call the API and it generates and returns a link to the generated video?
     - not sure how exactly this would work since video generation job is long but would be cool and useful
         - also having it accept params, having web_search as a metadata that is enabled/disabled all would be very nice
+
+## Priority 6: Chat Interface
+- [ ] V1: Text chat grounded on video narration + plan (simple Claude API call)
+- [ ] V2: Agent SDK with tools (search transcript, generate follow-up animations, cite timestamps)
+- [ ] Chat box on video detail page
+
+## Priority 7: Continuous Quality
+- [ ] Better voice selection (multiple ElevenLabs voices, auto-select by topic tone)
+- [ ] Improve research pipeline (filter/verify Tavily results before injecting)
+- [ ] Longer video support (medium/long reliability improvements)
+
 
 ## Baseline Eval Results (2026-03-22)
 - Plan avg: 8.3/10 (plans are solid)

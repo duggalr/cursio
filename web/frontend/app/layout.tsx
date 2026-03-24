@@ -11,9 +11,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Curiso — Understand anything visually",
+  title: "Curiso | Understand anything visually",
   description:
-    "AI-generated educational videos that make any topic click. Type what you're curious about, get a beautiful animated explanation.",
+    "AI-generated educational videos that make any topic or research paper click. Type a topic or upload a PDF, get a beautiful animated explanation.",
 };
 
 export default function RootLayout({

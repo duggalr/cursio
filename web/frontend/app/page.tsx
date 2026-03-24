@@ -386,7 +386,7 @@ export default function HomePage() {
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <p className="text-sm text-[var(--color-muted)]">
-                Enter a topic you're curious about, pick a video length, and let AI generate an animated explanation for you.
+                Enter any topic or upload a research paper, and let AI generate an animated visual explanation for you.
               </p>
               <span className="hidden shrink-0 text-xs text-[var(--color-muted)] sm:inline">
                 Unlimited generations. 100% free!
@@ -411,7 +411,7 @@ export default function HomePage() {
                       : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                   }`}
                 >
-                  Topic
+                  Generate from a topic
                 </button>
                 <button
                   type="button"
@@ -422,7 +422,7 @@ export default function HomePage() {
                       : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
                   }`}
                 >
-                  Research Paper
+                  Generate from a research paper
                 </button>
               </div>
               {inputMode === "paper" ? (
@@ -511,6 +511,11 @@ export default function HomePage() {
                 </>
               )}
               <div className="flex items-center justify-between pt-2">
+                {inputMode === "paper" ? (
+                  <p className="text-xs text-[var(--color-muted)]">
+                    Generates a 5-10 minute video using highest quality mode
+                  </p>
+                ) : (
                 <div className="flex items-center gap-3">
                   <div className="flex gap-1">
                     {["short", "medium", "long"].map((d) => (
@@ -585,6 +590,7 @@ export default function HomePage() {
                     </span>
                   </button>
                 </div>
+                )}
                 <button
                   type="submit"
                   disabled={submitting || (inputMode === "topic" ? !topic.trim() : !paperFile) || (!!activeJobId && jobStatus !== "completed" && jobStatus !== "failed")}
@@ -644,7 +650,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <p className="mt-2.5 text-[11px] text-[var(--color-muted)]">
-                  This usually takes around 5 minutes. You can refresh or leave this page — we'll email you once your video is complete.
+                  This usually takes around 5 minutes. You can refresh or leave this page. We'll email you once your video is complete.
                 </p>
               </motion.div>
             )}

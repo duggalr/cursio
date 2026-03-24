@@ -199,7 +199,9 @@ def run_pipeline(job_id: str) -> None:
         if paper_text:
             _update_job(job_id, status="planning", progress_message="Analyzing research paper...")
             from core.paper import plan_paper_video
-            plan = plan_paper_video(paper_text, paper_title=paper_title or topic, duration=duration)
+            # DEV_MAX_SCENES env var caps scene count for faster local testing
+            max_scenes = int(os.environ.get("DEV_MAX_SCENES", 0)) or None
+            plan = plan_paper_video(paper_text, paper_title=paper_title or topic, duration=duration, max_scenes=max_scenes)
         else:
             _update_job(job_id, progress_message="Planning scenes...")
             plan = plan_scenes(

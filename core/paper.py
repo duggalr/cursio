@@ -49,6 +49,7 @@ def plan_paper_video(
     paper_text: str,
     paper_title: str = "",
     duration: str = "medium",
+    max_scenes: int | None = None,
     model: str = "claude-sonnet-4-20250514",
 ) -> dict:
     """Create a video scene plan from a research paper.
@@ -56,6 +57,9 @@ def plan_paper_video(
     Unlike topic-based planning where Claude creates content from scratch,
     this extracts and restructures existing paper content into an engaging
     educational video format.
+
+    Args:
+        max_scenes: Cap the number of scenes (useful for testing).
     """
     client = anthropic.Anthropic()
 
@@ -111,4 +115,10 @@ Respond with ONLY valid JSON:
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
 
-    return json.loads(raw)
+    plan = json.loads(raw)
+
+    # Cap scenes if max_scenes is set (useful for local testing)
+    if max_scenes and len(plan.get("scenes", [])) > max_scenes:
+        plan["scenes"] = plan["scenes"][:max_scenes]
+
+    return plan
