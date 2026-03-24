@@ -413,17 +413,23 @@ export default function HomePage() {
                 >
                   Generate from a topic
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setInputMode("paper")}
-                  className={`rounded-md px-3 py-1 text-xs transition-colors ${
-                    inputMode === "paper"
-                      ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
-                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-                  }`}
-                >
-                  Generate from a research paper
-                </button>
+                {user?.email === "duggalr42@gmail.com" ? (
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("paper")}
+                    className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                      inputMode === "paper"
+                        ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    }`}
+                  >
+                    Generate from a research paper
+                  </button>
+                ) : (
+                  <span className="rounded-md px-3 py-1 text-xs text-[var(--color-border)] cursor-not-allowed">
+                    Research paper (coming soon)
+                  </span>
+                )}
               </div>
               {inputMode === "paper" ? (
                 <div

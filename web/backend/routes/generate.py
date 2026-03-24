@@ -101,6 +101,12 @@ async def generate_from_paper(
         raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     user_id = user["sub"]
+    user_email = user.get("email", "")
+
+    # Paper upload is currently restricted to allowed users
+    PAPER_ALLOWED_EMAILS = {"duggalr42@gmail.com"}
+    if user_email not in PAPER_ALLOWED_EMAILS:
+        raise HTTPException(status_code=403, detail="Research paper upload is coming soon")
 
     # Validate file
     if not file.filename or not file.filename.lower().endswith(".pdf"):
