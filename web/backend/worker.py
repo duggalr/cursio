@@ -121,6 +121,42 @@ def _update_job(job_id: str, **fields) -> None:
     supabase.table("generation_jobs").update(fields).eq("id", job_id).execute()
 
 
+def _upload_to_storage(
+    bucket: str,
+    storage_path: str,
+    local_path: Path,
+    content_type: str,
+    max_retries: int = 3,
+) -> str:
+    """Upload a file to Supabase Storage with retry logic.
+
+    Large files (10MB+ videos) can fail with connection resets.
+    Retries with exponential backoff to handle transient failures.
+
+    Returns the public URL.
+    """
+    import time as _time
+
+    supabase = get_supabase()
+    for attempt in range(max_retries):
+        try:
+            with open(local_path, "rb") as f:
+                supabase.storage.from_(bucket).upload(
+                    storage_path,
+                    f,
+                    file_options={"content-type": content_type},
+                )
+            return supabase.storage.from_(bucket).get_public_url(storage_path)
+        except Exception as exc:
+            if attempt < max_retries - 1:
+                wait = 2 ** (attempt + 1)  # 2s, 4s, 8s
+                print(f"    Upload failed (attempt {attempt + 1}/{max_retries}): {exc}")
+                print(f"    Retrying in {wait}s...")
+                _time.sleep(wait)
+            else:
+                raise
+
+
 def run_pipeline(job_id: str) -> None:
     """Execute the full video generation pipeline for a queued job.
 
@@ -142,6 +178,9 @@ def run_pipeline(job_id: str) -> None:
     duration: str = job.get("duration_profile", "short")
     user_id: str = job["user_id"]
     use_research: bool = job.get("use_research", False)
+    quality_mode: bool = job.get("quality_mode", False)
+    paper_text: str | None = job.get("paper_text")
+    paper_title: str | None = job.get("paper_title")
 
     try:
         # ── Stage 1: Research + Planning ─────────────────────────────
@@ -157,13 +196,20 @@ def run_pipeline(job_id: str) -> None:
         else:
             _update_job(job_id, status="planning", progress_message="Planning scenes...")
 
-        _update_job(job_id, progress_message="Planning scenes...")
-        plan = plan_scenes(
-            topic,
-            duration=duration,
-            research_context=research_context,
-            research_sources=research_sources,
-        )
+        if paper_text:
+            _update_job(job_id, status="planning", progress_message="Analyzing research paper...")
+            from core.paper import plan_paper_video
+            # DEV_MAX_SCENES env var caps scene count for faster local testing
+            max_scenes = int(os.environ.get("DEV_MAX_SCENES", 0)) or None
+            plan = plan_paper_video(paper_text, paper_title=paper_title or topic, duration=duration, max_scenes=max_scenes)
+        else:
+            _update_job(job_id, progress_message="Planning scenes...")
+            plan = plan_scenes(
+                topic,
+                duration=duration,
+                research_context=research_context,
+                research_sources=research_sources,
+            )
 
         topic_slug = slugify(plan["topic"])
         out_dir = OUTPUT_ROOT / f"web_{job_id}_{topic_slug}"
@@ -174,103 +220,122 @@ def run_pipeline(job_id: str) -> None:
 
         num_scenes = len(plan["scenes"])
 
-        # ── Stage 2: Voiceover (audio-first for timing) ──────────────
-        _update_job(
-            job_id,
-            status="voiceover",
-            progress_message="Generating voiceover audio...",
-        )
+        if quality_mode:
+            # ── Quality Mode Pipeline ──────────────────────────────
+            from core.quality_pipeline import run_quality_pipeline
 
-        audio_files: list[Path] = []
-        durations: list[float] = []
+            _update_job(job_id, status="generating", progress_message="Quality mode: generating scenes...")
 
-        for idx, scene in enumerate(plan["scenes"], start=1):
-            _update_job(
-                job_id,
-                progress_message=f"Generating voiceover for scene {idx} of {num_scenes}...",
-            )
-            audio_path = out_dir / f"scene_{idx:02d}.mp3"
-            generate_voice(scene["narration"], audio_path)
-            dur = get_audio_duration(audio_path)
-            audio_files.append(audio_path)
-            durations.append(dur)
-
-        # ── Stage 3: Code generation (with exact audio durations) ───
-        _update_job(
-            job_id,
-            status="generating",
-            progress_message=f"Generating animation code for {num_scenes} scenes...",
-        )
-        code = generate_manim_code(plan, scene_durations=durations)
-        code_path = out_dir / "scenes.py"
-        code_path.write_text(code)
-
-        scene_names = get_scene_names(code)
-        if not scene_names:
-            raise RuntimeError("No Scene classes found in generated code")
-
-        # ── Stage 4: Rendering ──────────────────────────────────────
-        _update_job(
-            job_id,
-            status="rendering",
-            progress_message=f"Rendering scene 1 of {len(scene_names)}...",
-        )
-
-        rendered_videos: list[Path] = []
-        current_code = code
-
-        for idx, scene_name in enumerate(scene_names, start=1):
-            _update_job(
-                job_id,
-                progress_message=f"Rendering scene {idx} of {len(scene_names)}...",
-            )
-            video_path, current_code = render_scene(
-                code=current_code,
-                scene_name=scene_name,
+            result = run_quality_pipeline(
+                plan=plan,
                 output_dir=out_dir,
-                code_path=code_path,
-                preview=False,
-            )
-            if video_path:
-                rendered_videos.append(video_path)
-
-        if not rendered_videos:
-            raise RuntimeError("No scenes rendered successfully")
-
-        # Fail if less than half the scenes rendered — don't publish a broken video
-        if len(rendered_videos) < len(scene_names) / 2:
-            raise RuntimeError(
-                f"Only {len(rendered_videos)} of {len(scene_names)} scenes rendered. "
-                f"Aborting to avoid publishing an incomplete video."
+                no_voice=False,
+                on_progress=lambda msg: _update_job(job_id, progress_message=msg),
             )
 
-        # Save final (possibly patched) code
-        code_path.write_text(current_code)
-
-        # ── Stage 5: Assembly ────────────────────────────────────────
-        _update_job(
-            job_id,
-            status="assembling",
-            progress_message="Assembling final video...",
-        )
-
-        combined_scenes: list[Path] = []
-        for idx, (video, audio) in enumerate(
-            zip(rendered_videos, audio_files), start=1
-        ):
+            # Use the adjusted narrations for the video record
+            full_narration = "\n\n".join(result["narrations"])
+            scene_videos = result["scene_videos"]
+            final_path = result["final_path"]
+            durations = result["scene_durations"]
+        else:
+            # ── Stage 2: Voiceover (audio-first for timing) ──────────────
             _update_job(
                 job_id,
-                progress_message=f"Combining scene {idx} video and audio...",
+                status="voiceover",
+                progress_message="Generating voiceover audio...",
             )
-            combined_path = out_dir / f"combined_{idx:02d}.mp4"
-            combine_scene(video, audio, combined_path)
-            combined_scenes.append(combined_path)
 
-        final_path = out_dir / "final.mp4"
-        if len(combined_scenes) == 1:
-            combined_scenes[0].rename(final_path)
-        else:
-            concatenate_scenes(combined_scenes, final_path)
+            audio_files: list[Path] = []
+            durations: list[float] = []
+
+            for idx, scene in enumerate(plan["scenes"], start=1):
+                _update_job(
+                    job_id,
+                    progress_message=f"Generating voiceover for scene {idx} of {num_scenes}...",
+                )
+                audio_path = out_dir / f"scene_{idx:02d}.mp3"
+                generate_voice(scene["narration"], audio_path)
+                dur = get_audio_duration(audio_path)
+                audio_files.append(audio_path)
+                durations.append(dur)
+
+            # ── Stage 3: Code generation (with exact audio durations) ───
+            _update_job(
+                job_id,
+                status="generating",
+                progress_message=f"Generating animation code for {num_scenes} scenes...",
+            )
+            code = generate_manim_code(plan, scene_durations=durations)
+            code_path = out_dir / "scenes.py"
+            code_path.write_text(code)
+
+            scene_names = get_scene_names(code)
+            if not scene_names:
+                raise RuntimeError("No Scene classes found in generated code")
+
+            # ── Stage 4: Rendering ──────────────────────────────────────
+            _update_job(
+                job_id,
+                status="rendering",
+                progress_message=f"Rendering scene 1 of {len(scene_names)}...",
+            )
+
+            rendered_videos: list[Path] = []
+            current_code = code
+
+            for idx, scene_name in enumerate(scene_names, start=1):
+                _update_job(
+                    job_id,
+                    progress_message=f"Rendering scene {idx} of {len(scene_names)}...",
+                )
+                video_path, current_code = render_scene(
+                    code=current_code,
+                    scene_name=scene_name,
+                    output_dir=out_dir,
+                    code_path=code_path,
+                    preview=False,
+                )
+                if video_path:
+                    rendered_videos.append(video_path)
+
+            if not rendered_videos:
+                raise RuntimeError("No scenes rendered successfully")
+
+            # Fail if less than half the scenes rendered — don't publish a broken video
+            if len(rendered_videos) < len(scene_names) / 2:
+                raise RuntimeError(
+                    f"Only {len(rendered_videos)} of {len(scene_names)} scenes rendered. "
+                    f"Aborting to avoid publishing an incomplete video."
+                )
+
+            # Save final (possibly patched) code
+            code_path.write_text(current_code)
+
+            # ── Stage 5: Assembly ────────────────────────────────────────
+            _update_job(
+                job_id,
+                status="assembling",
+                progress_message="Assembling final video...",
+            )
+
+            combined_scenes: list[Path] = []
+            for idx, (video, audio) in enumerate(
+                zip(rendered_videos, audio_files), start=1
+            ):
+                _update_job(
+                    job_id,
+                    progress_message=f"Combining scene {idx} video and audio...",
+                )
+                combined_path = out_dir / f"combined_{idx:02d}.mp4"
+                combine_scene(video, audio, combined_path)
+                combined_scenes.append(combined_path)
+
+            final_path = out_dir / "final.mp4"
+            if len(combined_scenes) == 1:
+                combined_scenes[0].rename(final_path)
+            else:
+                concatenate_scenes(combined_scenes, final_path)
 
         # ── Generate thumbnail ──────────────────────────────────────
         thumbnail_path = out_dir / "thumbnail.jpg"
@@ -302,47 +367,34 @@ def run_pipeline(job_id: str) -> None:
             progress_message="Uploading video...",
         )
 
-        storage_path = f"videos/{job_id}/final.mp4"
-        with open(final_path, "rb") as f:
-            supabase.storage.from_("generated_videos").upload(
-                storage_path,
-                f,
-                file_options={"content-type": "video/mp4"},
-            )
-
-        video_url = supabase.storage.from_("generated_videos").get_public_url(storage_path)
+        video_url = _upload_to_storage(
+            "generated_videos", f"videos/{job_id}/final.mp4",
+            final_path, "video/mp4",
+        )
 
         # Upload vertical version
         vertical_video_url = None
         if vertical_path.exists():
-            vert_storage_path = f"videos/{job_id}/vertical.mp4"
-            with open(vertical_path, "rb") as f:
-                supabase.storage.from_("generated_videos").upload(
-                    vert_storage_path,
-                    f,
-                    file_options={"content-type": "video/mp4"},
-                )
-            vertical_video_url = supabase.storage.from_("generated_videos").get_public_url(vert_storage_path)
-
-        # Upload thumbnail
-        thumb_storage_path = f"videos/{job_id}/thumbnail.jpg"
-        with open(thumbnail_path, "rb") as f:
-            supabase.storage.from_("generated_videos").upload(
-                thumb_storage_path,
-                f,
-                file_options={"content-type": "image/jpeg"},
+            vertical_video_url = _upload_to_storage(
+                "generated_videos", f"videos/{job_id}/vertical.mp4",
+                vertical_path, "video/mp4",
             )
 
-        thumbnail_url = supabase.storage.from_("generated_videos").get_public_url(thumb_storage_path)
+        # Upload thumbnail
+        thumbnail_url = _upload_to_storage(
+            "generated_videos", f"videos/{job_id}/thumbnail.jpg",
+            thumbnail_path, "image/jpeg",
+        )
 
         # Compute video duration from assembled durations
         total_duration = sum(durations)
 
-        # Build narration text for the video record
-        successful_scenes = plan["scenes"][:len(rendered_videos)]
-        full_narration = "\n\n".join(
-            scene["narration"] for scene in successful_scenes
-        )
+        # Build narration text for the video record (skip if quality mode already set it)
+        if not quality_mode:
+            successful_scenes = plan["scenes"][:len(rendered_videos)]
+            full_narration = "\n\n".join(
+                scene["narration"] for scene in successful_scenes
+            )
 
         # ── Create videos row ────────────────────────────────────────
         video_row = {

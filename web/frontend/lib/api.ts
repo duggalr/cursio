@@ -86,7 +86,8 @@ export async function generateVideo(
   topic: string,
   duration: string,
   token: string,
-  useResearch: boolean = false
+  useResearch: boolean = false,
+  qualityMode: boolean = false,
 ): Promise<{ job_id: string }> {
   const res = await fetch(`${API_URL}/api/generate`, {
     method: "POST",
@@ -94,7 +95,7 @@ export async function generateVideo(
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ topic, duration, use_research: useResearch }),
+    body: JSON.stringify({ topic, duration, use_research: useResearch, quality_mode: qualityMode }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -129,6 +130,29 @@ export async function unlikeVideo(videoId: string, token: string): Promise<void>
   if (!res.ok) {
     throw new Error(`Failed to unlike video: ${res.statusText}`);
   }
+}
+
+export async function generateFromPaper(
+  file: File,
+  duration: string,
+  token: string,
+): Promise<{ job_id: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("duration", duration);
+
+  const res = await fetch(`${API_URL}/api/generate-from-paper`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to upload paper: ${res.statusText}`);
+  }
+  return res.json();
 }
 
 export async function fetchActiveJob(token: string): Promise<Job | null> {

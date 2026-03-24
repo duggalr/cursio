@@ -7,15 +7,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   try {
     const res = await fetch(`${API_URL}/api/videos/${slug}`, { next: { revalidate: 3600 } });
-    if (!res.ok) return { title: "Video — Curiso" };
+    if (!res.ok) return { title: "Video | Curiso" };
 
     const video = await res.json();
     const description = video.narration_text
       ? video.narration_text.slice(0, 160) + (video.narration_text.length > 160 ? "..." : "")
-      : `Watch "${video.title}" — an AI-generated educational video on Curiso`;
+      : `Watch "${video.title}" | an AI-generated educational video on Curiso`;
 
     return {
-      title: `${video.title} — Curiso`,
+      title: `${video.title} | Curiso`,
       description,
       openGraph: {
         title: video.title,
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       },
     };
   } catch {
-    return { title: "Video — Curiso" };
+    return { title: "Video | Curiso" };
   }
 }
 

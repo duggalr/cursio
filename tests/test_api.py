@@ -207,3 +207,95 @@ def test_generate_request_with_research():
     from web.backend.models import GenerateRequest
     r = GenerateRequest(topic="test", use_research=True)
     assert r.use_research is True
+
+
+def test_generate_request_quality_mode_default():
+    """GenerateRequest defaults quality_mode to False."""
+    from web.backend.models import GenerateRequest
+    r = GenerateRequest(topic="test")
+    assert r.quality_mode is False
+
+
+def test_generate_request_quality_mode_true():
+    """GenerateRequest accepts quality_mode=True."""
+    from web.backend.models import GenerateRequest
+    r = GenerateRequest(topic="test", quality_mode=True)
+    assert r.quality_mode is True
+
+
+# ─── Paper Upload ───────────────────────────────────────────────────
+
+
+def test_paper_upload_requires_auth(client):
+    """POST /api/generate-from-paper requires auth header."""
+    res = client.post("/api/generate-from-paper")
+    assert res.status_code == 422
+
+
+def test_paper_upload_blocked_for_non_allowed_user(client):
+    """POST /api/generate-from-paper returns 403 for non-allowed users."""
+    import io
+    with patch(
+        "web.backend.routes.generate.get_user_from_token",
+        return_value={"sub": "user-123", "email": "someone@example.com"},
+    ):
+        from web.backend.app import app
+        from fastapi.testclient import TestClient
+        c = TestClient(app)
+        res = c.post(
+            "/api/generate-from-paper",
+            headers={"Authorization": "Bearer fake-token"},
+            files={"file": ("paper.pdf", io.BytesIO(b"%PDF-1.4 test"), "application/pdf")},
+            data={"duration": "medium"},
+        )
+    assert res.status_code == 403
+    assert "coming soon" in res.json()["detail"]
+
+
+def test_paper_upload_allowed_for_admin(client, mock_supabase):
+    """POST /api/generate-from-paper works for allowed email."""
+    import io
+    mock_insert = MagicMock()
+    mock_insert.data = [{"id": "paper-job-1"}]
+
+    mock_sb = MagicMock()
+    mock_sb.table.return_value.insert.return_value.execute.return_value = mock_insert
+
+    with patch(
+        "web.backend.routes.generate.get_user_from_token",
+        return_value={"sub": "admin-user", "email": "duggalr42@gmail.com"},
+    ):
+        with patch("web.backend.routes.generate.get_supabase", return_value=mock_sb):
+            with patch("web.backend.routes.generate.run_pipeline"):
+                with patch("core.paper.extract_paper_text", return_value={"title": "Test Paper", "text": "content", "num_pages": 5}):
+                    from web.backend.app import app
+                    from fastapi.testclient import TestClient
+                    c = TestClient(app)
+                    res = c.post(
+                        "/api/generate-from-paper",
+                        headers={"Authorization": "Bearer fake-token"},
+                        files={"file": ("paper.pdf", io.BytesIO(b"%PDF-1.4 test"), "application/pdf")},
+                        data={"duration": "medium"},
+                    )
+    assert res.status_code == 200
+    assert res.json()["job_id"] == "paper-job-1"
+
+
+def test_paper_upload_rejects_non_pdf(client):
+    """POST /api/generate-from-paper rejects non-PDF files."""
+    import io
+    with patch(
+        "web.backend.routes.generate.get_user_from_token",
+        return_value={"sub": "admin-user", "email": "duggalr42@gmail.com"},
+    ):
+        from web.backend.app import app
+        from fastapi.testclient import TestClient
+        c = TestClient(app)
+        res = c.post(
+            "/api/generate-from-paper",
+            headers={"Authorization": "Bearer fake-token"},
+            files={"file": ("doc.txt", io.BytesIO(b"hello"), "text/plain")},
+            data={"duration": "medium"},
+        )
+    assert res.status_code == 400
+    assert "PDF" in res.json()["detail"]

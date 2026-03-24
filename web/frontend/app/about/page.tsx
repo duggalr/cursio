@@ -8,12 +8,12 @@ const sections = [
   {
     title: "What is Curiso?",
     content:
-      "Curiso is a 100% free AI-powered platform that turns any topic into a short, animated educational video. Type in what you want to learn about, and within minutes you will get a visual explanation with narration, animations, and a clear storyline. No limits, no payment required. Think of it as having a personal tutor who can explain anything visually, on demand.",
+      "Curiso is a 100% free AI-powered platform that turns any topic or research paper into an animated educational video. Type in what you want to learn about or upload a PDF, and within minutes you will get a visual explanation with narration, animations, and a clear storyline. No limits, no payment required. Think of it as having a personal tutor who can explain anything visually, on demand.",
   },
   {
     title: "How it works",
     content:
-      "Behind the scenes, Curiso uses a multi-stage pipeline. First, an AI plans the lesson structure and writes a narration script. Then, it generates mathematical animation code using Manim (the same engine behind 3Blue1Brown videos). The animations are rendered, paired with AI-generated voiceover, and assembled into a final video. The entire process is automated and takes about five minutes.",
+      "Behind the scenes, Curiso uses a multi-stage pipeline. First, an AI plans the lesson structure and writes a narration script. For research papers, it reads the full PDF and restructures the content for maximum educational impact. Then, it generates mathematical animation code using Manim (the same engine behind 3Blue1Brown videos). Each scene is rendered, visually inspected, and refined. The animations are paired with AI-generated voiceover and assembled into a final video. The entire process is automated and takes about five minutes for short topics, longer for in-depth paper explanations.",
   },
   {
     title: "Why we built this",

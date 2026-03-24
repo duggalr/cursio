@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install anthropic python-dotenv pyjwt fastapi uvicorn httpx supabase tavily-python elevenlabs
+          pip install anthropic python-dotenv pyjwt fastapi uvicorn httpx supabase tavily-python elevenlabs python-multipart pdfplumber
           pip install pytest
 
       - name: Run tests
