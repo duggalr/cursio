@@ -7,7 +7,14 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, File, UploadFile, Form
 
+from pydantic import BaseModel
+
 from web.backend.models import GenerateRequest, GenerateResponse
+
+
+class URLGenerateRequest(BaseModel):
+    url: str
+    duration: str = "medium"
 from web.backend.supabase_client import get_supabase, get_user_from_token
 from web.backend.worker import run_pipeline
 
@@ -145,6 +152,57 @@ async def generate_from_paper(
         "quality_mode": True,  # Always quality mode for papers
         "paper_text": paper["text"],
         "paper_title": paper["title"],
+        "status": "queued",
+        "progress_message": "Waiting in queue...",
+    }
+    insert_response = supabase.table("generation_jobs").insert(job_row).execute()
+    job_id = insert_response.data[0]["id"]
+
+    background_tasks.add_task(run_pipeline, job_id)
+
+    return GenerateResponse(job_id=job_id)
+
+
+@router.post("/generate-from-url", response_model=GenerateResponse)
+async def generate_from_url(
+    body: URLGenerateRequest,
+    background_tasks: BackgroundTasks,
+    authorization: str = Header(..., description="Bearer token"),
+):
+    """Generate a video from a blog post or article URL."""
+    token = _extract_token(authorization)
+    try:
+        user = get_user_from_token(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    user_id = user["sub"]
+    user_email = user.get("email", "")
+
+    ALLOWED_EMAILS = {"duggalr42@gmail.com"}
+    if user_email not in ALLOWED_EMAILS:
+        raise HTTPException(status_code=403, detail="Blog post to video is coming soon")
+
+    if not body.url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Please provide a valid URL starting with http:// or https://")
+
+    from core.blogpost import extract_blogpost
+    try:
+        article = extract_blogpost(body.url)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not extract content from URL: {str(exc)}")
+
+    supabase = get_supabase()
+
+    job_row = {
+        "user_id": user_id,
+        "topic": article["title"][:500] or body.url,
+        "duration_profile": body.duration,
+        "use_research": False,
+        "quality_mode": True,
+        "paper_text": article["text"],
+        "paper_title": article["title"],
+        "source_url": body.url,
         "status": "queued",
         "progress_message": "Waiting in queue...",
     }

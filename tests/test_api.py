@@ -319,3 +319,75 @@ def test_paper_upload_rejects_non_pdf(client):
         )
     assert res.status_code == 400
     assert "PDF" in res.json()["detail"]
+
+
+# ─── Blog Post URL ──────────────────────────────────────────────────
+
+
+def test_url_generate_requires_auth(client):
+    """POST /api/generate-from-url requires auth header."""
+    res = client.post("/api/generate-from-url", json={"url": "https://example.com"})
+    assert res.status_code == 422
+
+
+def test_url_generate_blocked_for_non_allowed_user(client):
+    """POST /api/generate-from-url returns 403 for non-allowed users."""
+    with patch(
+        "web.backend.routes.generate.get_user_from_token",
+        return_value={"sub": "user-123", "email": "someone@example.com"},
+    ):
+        from web.backend.app import app
+        from fastapi.testclient import TestClient
+        c = TestClient(app)
+        res = c.post(
+            "/api/generate-from-url",
+            json={"url": "https://example.com/post"},
+            headers={"Authorization": "Bearer fake-token"},
+        )
+    assert res.status_code == 403
+    assert "coming soon" in res.json()["detail"]
+
+
+def test_url_generate_rejects_invalid_url(client):
+    """POST /api/generate-from-url rejects non-http URLs."""
+    with patch(
+        "web.backend.routes.generate.get_user_from_token",
+        return_value={"sub": "admin-user", "email": "duggalr42@gmail.com"},
+    ):
+        from web.backend.app import app
+        from fastapi.testclient import TestClient
+        c = TestClient(app)
+        res = c.post(
+            "/api/generate-from-url",
+            json={"url": "not-a-url"},
+            headers={"Authorization": "Bearer fake-token"},
+        )
+    assert res.status_code == 400
+    assert "valid URL" in res.json()["detail"]
+
+
+def test_url_generate_allowed_for_admin(client, mock_supabase):
+    """POST /api/generate-from-url works for allowed email."""
+    mock_insert = MagicMock()
+    mock_insert.data = [{"id": "url-job-1"}]
+
+    mock_sb = MagicMock()
+    mock_sb.table.return_value.insert.return_value.execute.return_value = mock_insert
+
+    with patch(
+        "web.backend.routes.generate.get_user_from_token",
+        return_value={"sub": "admin-user", "email": "duggalr42@gmail.com"},
+    ):
+        with patch("web.backend.routes.generate.get_supabase", return_value=mock_sb):
+            with patch("web.backend.routes.generate.run_pipeline"):
+                with patch("core.blogpost.extract_blogpost", return_value={"title": "Test Post", "text": "content " * 50, "url": "https://example.com/post", "word_count": 50}):
+                    from web.backend.app import app
+                    from fastapi.testclient import TestClient
+                    c = TestClient(app)
+                    res = c.post(
+                        "/api/generate-from-url",
+                        json={"url": "https://example.com/post"},
+                        headers={"Authorization": "Bearer fake-token"},
+                    )
+    assert res.status_code == 200
+    assert res.json()["job_id"] == "url-job-1"

@@ -17,6 +17,7 @@ export interface Video {
   narration_text: string | null;
   like_count: number;
   view_count: number;
+  source_url: string | null;
   sources: VideoSource[] | null;
   tags: string[] | null;
   created_at: string;
@@ -152,6 +153,26 @@ export async function generateFromPaper(
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || `Failed to upload paper: ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function generateFromURL(
+  url: string,
+  duration: string,
+  token: string,
+): Promise<{ job_id: string }> {
+  const res = await fetch(`${API_URL}/api/generate-from-url`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ url, duration }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to generate from URL: ${res.statusText}`);
   }
   return res.json();
 }

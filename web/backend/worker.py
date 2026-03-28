@@ -181,6 +181,7 @@ def run_pipeline(job_id: str) -> None:
     quality_mode: bool = job.get("quality_mode", False)
     paper_text: str | None = job.get("paper_text")
     paper_title: str | None = job.get("paper_title")
+    source_url: str | None = job.get("source_url")
 
     try:
         # ── Stage 1: Research + Planning ─────────────────────────────
@@ -410,6 +411,9 @@ def run_pipeline(job_id: str) -> None:
             "video_duration_seconds": total_duration,
             "view_count": 0,
         }
+
+        if source_url:
+            video_row["source_url"] = source_url
 
         # Generate URL slug and tags
         slug = url_slugify(plan.get("title", topic))

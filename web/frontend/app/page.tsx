@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import VideoCard from "@/components/VideoCard";
 import AuthModal from "@/components/AuthModal";
 import { Dice5 } from "lucide-react";
-import { fetchVideos, fetchTags, fetchJobStatus, fetchActiveJob, generateVideo, generateFromPaper, type Video, type TagWithCount } from "@/lib/api";
+import { fetchVideos, fetchTags, fetchJobStatus, fetchActiveJob, generateVideo, generateFromPaper, generateFromURL, type Video, type TagWithCount } from "@/lib/api";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
 const allTopics = [
@@ -89,7 +89,8 @@ export default function HomePage() {
   };
 
   // Generate state
-  const [inputMode, setInputMode] = useState<"topic" | "paper">("topic");
+  const [inputMode, setInputMode] = useState<"topic" | "paper" | "blogpost">("topic");
+  const [blogUrl, setBlogUrl] = useState("");
   const [paperFile, setPaperFile] = useState<File | null>(null);
   const [topic, setTopic] = useState("");
   const [duration, setDuration] = useState("short");
@@ -332,6 +333,7 @@ export default function HomePage() {
     // Validate input based on mode
     if (inputMode === "topic" && !topic.trim()) return;
     if (inputMode === "paper" && !paperFile) return;
+    if (inputMode === "blogpost" && !blogUrl.trim()) return;
 
     if (!user) {
       setAuthMode("signup");
@@ -357,6 +359,9 @@ export default function HomePage() {
       if (inputMode === "paper" && paperFile) {
         const result = await generateFromPaper(paperFile, duration, session.access_token);
         job_id = result.job_id;
+      } else if (inputMode === "blogpost" && blogUrl.trim()) {
+        const result = await generateFromURL(blogUrl.trim(), duration, session.access_token);
+        job_id = result.job_id;
       } else {
         const result = await generateVideo(topic, duration, session.access_token, useResearch, qualityMode);
         job_id = result.job_id;
@@ -367,6 +372,7 @@ export default function HomePage() {
       setJobStatus("planning");
       setTopic("");
       setPaperFile(null);
+      setBlogUrl("");
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : "Failed to start generation");
     } finally {
@@ -444,8 +450,35 @@ export default function HomePage() {
                     Research paper (coming soon)
                   </span>
                 )}
+                {user?.email === "duggalr42@gmail.com" ? (
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("blogpost")}
+                    className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                      inputMode === "blogpost"
+                        ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    }`}
+                  >
+                    Generate from a blog post
+                  </button>
+                ) : (
+                  <span className="rounded-md px-3 py-1 text-xs text-[var(--color-border)] cursor-not-allowed">
+                    Blog post (coming soon)
+                  </span>
+                )}
               </div>
-              {inputMode === "paper" ? (
+              {inputMode === "blogpost" ? (
+                <div className="py-2">
+                  <input
+                    type="url"
+                    value={blogUrl}
+                    onChange={(e) => setBlogUrl(e.target.value)}
+                    placeholder="Paste a blog post or article URL (e.g. https://blog.example.com/post)"
+                    className="w-full bg-transparent text-sm text-[var(--color-foreground)] placeholder-[var(--color-muted)] outline-none"
+                  />
+                </div>
+              ) : inputMode === "paper" ? (
                 <div
                   className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-[var(--color-border)] p-6 transition-colors hover:border-[var(--color-muted)]"
                   onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -531,7 +564,7 @@ export default function HomePage() {
                 </>
               )}
               <div className="flex items-center justify-between pt-2">
-                {inputMode === "paper" ? (
+                {inputMode === "paper" || inputMode === "blogpost" ? (
                   <p className="text-xs text-[var(--color-muted)]">
                     Generates a 5-10 minute video using highest quality mode
                   </p>
@@ -613,7 +646,7 @@ export default function HomePage() {
                 )}
                 <button
                   type="submit"
-                  disabled={submitting || (inputMode === "topic" ? !topic.trim() : !paperFile) || (!!activeJobId && jobStatus !== "completed" && jobStatus !== "failed")}
+                  disabled={submitting || (inputMode === "topic" ? !topic.trim() : inputMode === "paper" ? !paperFile : !blogUrl.trim()) || (!!activeJobId && jobStatus !== "completed" && jobStatus !== "failed")}
                   className="rounded-lg bg-[var(--color-foreground)] px-4 py-1.5 text-xs font-medium text-[var(--color-background)] transition-opacity disabled:opacity-40"
                 >
                   {submitting ? "Starting..." : "Generate"}
