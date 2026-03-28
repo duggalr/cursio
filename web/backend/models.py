@@ -50,6 +50,7 @@ class Video(BaseModel):
     view_count: int = 0
     like_count: int = 0
     slug: str | None = None
+    source_url: str | None = None
     sources: list[dict] | None = None
     tags: list[str] | None = None
     created_at: str
