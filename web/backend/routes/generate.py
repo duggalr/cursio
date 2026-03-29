@@ -14,7 +14,7 @@ from web.backend.models import GenerateRequest, GenerateResponse
 
 class URLGenerateRequest(BaseModel):
     url: str
-    duration: str = "medium"
+    duration: str = "long"
 from web.backend.supabase_client import get_supabase, get_user_from_token
 from web.backend.worker import run_pipeline
 
@@ -93,7 +93,7 @@ async def generate_from_paper(
     background_tasks: BackgroundTasks,
     authorization: str = Header(..., description="Bearer token"),
     file: UploadFile = File(..., description="PDF file"),
-    duration: str = Form("medium", description="Video duration: short, medium, long"),
+    duration: str = Form("long", description="Video duration: short, medium, long"),
 ):
     """Generate a video from an uploaded research paper PDF.
 
@@ -144,8 +144,8 @@ async def generate_from_paper(
         "duration_profile": duration,
         "use_research": False,
         "quality_mode": True,  # Always quality mode for papers
-        "paper_text": paper["text"],
-        "paper_title": paper["title"],
+        "paper_text": paper["text"].replace("\x00", ""),
+        "paper_title": paper["title"].replace("\x00", ""),
         "status": "queued",
         "progress_message": "Waiting in queue...",
     }

@@ -442,7 +442,7 @@ export default function HomePage() {
               <div className="mb-3 flex gap-1">
                 <button
                   type="button"
-                  onClick={() => setInputMode("topic")}
+                  onClick={() => { setInputMode("topic"); setDuration("short"); }}
                   className={`rounded-md px-3 py-1 text-xs transition-colors ${
                     inputMode === "topic"
                       ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
@@ -453,7 +453,7 @@ export default function HomePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInputMode("paper")}
+                  onClick={() => { setInputMode("paper"); setDuration("long"); }}
                   className={`rounded-md px-3 py-1 text-xs transition-colors ${
                     inputMode === "paper"
                       ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
@@ -464,7 +464,7 @@ export default function HomePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInputMode("blogpost")}
+                  onClick={() => { setInputMode("blogpost"); setDuration("long"); }}
                   className={`rounded-md px-3 py-1 text-xs transition-colors ${
                     inputMode === "blogpost"
                       ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
@@ -570,10 +570,35 @@ export default function HomePage() {
                 </>
               )}
               <div className="flex items-center justify-between pt-2">
-                {inputMode === "paper" || inputMode === "blogpost" ? (
+                {inputMode === "paper" ? (
                   <p className="text-xs text-[var(--color-muted)]">
-                    Generates a 5-10 minute video using highest quality mode
+                    Generates an 8-12 minute deep dive using highest quality mode
                   </p>
+                ) : inputMode === "blogpost" ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      {[
+                        { value: "short", label: "Summary", desc: "2-3 min" },
+                        { value: "medium", label: "Overview", desc: "5-7 min" },
+                        { value: "long", label: "Deep Dive", desc: "8-12 min" },
+                      ].map((d) => (
+                        <button
+                          key={d.value}
+                          type="button"
+                          onClick={() => setDuration(d.value)}
+                          className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                            duration === d.value
+                              ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                              : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                          }`}
+                        >
+                          {d.label}
+                          <span className="ml-1 text-[10px] opacity-50">{d.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-[10px] text-[var(--color-muted)]">Highest quality mode</span>
+                  </div>
                 ) : (
                 <div className="flex items-center gap-3">
                   <div className="flex gap-1">
@@ -684,7 +709,10 @@ export default function HomePage() {
                   ))}
                 </div>
                 <p className="mt-2.5 text-[11px] text-[var(--color-muted)]">
-                  This usually takes around 5 minutes. You can refresh or leave this page. We'll email you once your video is complete.
+                  {inputMode === "paper" || inputMode === "blogpost"
+                    ? "Research papers and blog posts take 15-30 minutes for a thorough video. You can refresh or leave this page. We'll email you once your video is complete."
+                    : "This usually takes around 5 minutes. You can refresh or leave this page. We'll email you once your video is complete."
+                  }
                 </p>
               </motion.div>
             )}
