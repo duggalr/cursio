@@ -433,40 +433,28 @@ export default function HomePage() {
                 >
                   Generate from a topic
                 </button>
-                {user?.email === "duggalr42@gmail.com" ? (
-                  <button
-                    type="button"
-                    onClick={() => setInputMode("paper")}
-                    className={`rounded-md px-3 py-1 text-xs transition-colors ${
-                      inputMode === "paper"
-                        ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-                    }`}
-                  >
-                    Generate from a research paper
-                  </button>
-                ) : (
-                  <span className="rounded-md px-3 py-1 text-xs text-[var(--color-border)] cursor-not-allowed">
-                    Research paper (coming soon)
-                  </span>
-                )}
-                {user?.email === "duggalr42@gmail.com" ? (
-                  <button
-                    type="button"
-                    onClick={() => setInputMode("blogpost")}
-                    className={`rounded-md px-3 py-1 text-xs transition-colors ${
-                      inputMode === "blogpost"
-                        ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
-                        : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-                    }`}
-                  >
-                    Generate from a blog post
-                  </button>
-                ) : (
-                  <span className="rounded-md px-3 py-1 text-xs text-[var(--color-border)] cursor-not-allowed">
-                    Blog post (coming soon)
-                  </span>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setInputMode("paper")}
+                  className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                    inputMode === "paper"
+                      ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                  }`}
+                >
+                  Generate from a research paper
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputMode("blogpost")}
+                  className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                    inputMode === "blogpost"
+                      ? "bg-[var(--color-surface-hover)] font-medium text-[var(--color-foreground)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                  }`}
+                >
+                  Generate from a blog post
+                </button>
               </div>
               {inputMode === "blogpost" ? (
                 <div className="py-2">
@@ -617,31 +605,6 @@ export default function HomePage() {
                     </span>
                   </button>
 
-                  <div className="h-4 w-px bg-[var(--color-border)]" />
-
-                  <button
-                    type="button"
-                    onClick={() => setQualityMode(!qualityMode)}
-                    className="flex items-center gap-2 text-xs text-[var(--color-muted)]"
-                  >
-                    <span
-                      className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
-                        qualityMode ? "bg-[var(--color-foreground)]" : "bg-[var(--color-border)]"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-3 w-3 rounded-full bg-[var(--color-background)] transition-transform ${
-                          qualityMode ? "translate-x-3.5" : "translate-x-0.5"
-                        }`}
-                      />
-                    </span>
-                    <span className={qualityMode ? "text-[var(--color-foreground)]" : ""}>
-                      Quality mode
-                    </span>
-                    <span className="hidden text-[10px] sm:inline">
-                      (slower, higher quality)
-                    </span>
-                  </button>
                 </div>
                 )}
                 <button
