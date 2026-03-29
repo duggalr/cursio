@@ -95,7 +95,7 @@ export default function HomePage() {
   const [topic, setTopic] = useState("");
   const [duration, setDuration] = useState("short");
   const [useResearch, setUseResearch] = useState(false);
-  const [qualityMode, setQualityMode] = useState(false);
+  const [qualityMode, setQualityMode] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [genCount, setGenCount] = useState<number | null>(null);
