@@ -420,7 +420,25 @@ export default function HomePage() {
             animate={mounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
             transition={{ delay: 0.15, duration: 0.5, ease: "easeOut" }}
           >
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow focus-within:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+            <div className="relative rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-shadow focus-within:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+              {/* Upload/processing overlay */}
+              <AnimatePresence>
+                {submitting && (
+                  <motion.div
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-[var(--color-surface)]/95 backdrop-blur-sm"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-foreground)]" />
+                    <p className="mt-3 text-sm text-[var(--color-foreground)]">
+                      {inputMode === "paper" ? "Uploading and reading paper..." : inputMode === "blogpost" ? "Fetching and reading article..." : "Starting generation..."}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[var(--color-muted)]">This may take a few seconds</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className="mb-3 flex gap-1">
                 <button
                   type="button"
