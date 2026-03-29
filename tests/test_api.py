@@ -252,24 +252,32 @@ def test_paper_upload_requires_auth(client):
     assert res.status_code == 422
 
 
-def test_paper_upload_blocked_for_non_allowed_user(client):
-    """POST /api/generate-from-paper returns 403 for non-allowed users."""
+def test_paper_upload_works_for_any_user(client, mock_supabase):
+    """POST /api/generate-from-paper works for any authenticated user."""
     import io
+    mock_insert = MagicMock()
+    mock_insert.data = [{"id": "paper-job-any"}]
+
+    mock_sb = MagicMock()
+    mock_sb.table.return_value.insert.return_value.execute.return_value = mock_insert
+
     with patch(
         "web.backend.routes.generate.get_user_from_token",
         return_value={"sub": "user-123", "email": "someone@example.com"},
     ):
-        from web.backend.app import app
-        from fastapi.testclient import TestClient
-        c = TestClient(app)
-        res = c.post(
-            "/api/generate-from-paper",
-            headers={"Authorization": "Bearer fake-token"},
-            files={"file": ("paper.pdf", io.BytesIO(b"%PDF-1.4 test"), "application/pdf")},
-            data={"duration": "medium"},
-        )
-    assert res.status_code == 403
-    assert "coming soon" in res.json()["detail"]
+        with patch("web.backend.routes.generate.get_supabase", return_value=mock_sb):
+            with patch("web.backend.routes.generate.run_pipeline"):
+                with patch("core.paper.extract_paper_text", return_value={"title": "Test", "text": "content", "num_pages": 5}):
+                    from web.backend.app import app
+                    from fastapi.testclient import TestClient
+                    c = TestClient(app)
+                    res = c.post(
+                        "/api/generate-from-paper",
+                        headers={"Authorization": "Bearer fake-token"},
+                        files={"file": ("paper.pdf", io.BytesIO(b"%PDF-1.4 test"), "application/pdf")},
+                        data={"duration": "medium"},
+                    )
+    assert res.status_code == 200
 
 
 def test_paper_upload_allowed_for_admin(client, mock_supabase):
@@ -330,22 +338,30 @@ def test_url_generate_requires_auth(client):
     assert res.status_code == 422
 
 
-def test_url_generate_blocked_for_non_allowed_user(client):
-    """POST /api/generate-from-url returns 403 for non-allowed users."""
+def test_url_generate_works_for_any_user(client, mock_supabase):
+    """POST /api/generate-from-url works for any authenticated user."""
+    mock_insert = MagicMock()
+    mock_insert.data = [{"id": "url-job-any"}]
+
+    mock_sb = MagicMock()
+    mock_sb.table.return_value.insert.return_value.execute.return_value = mock_insert
+
     with patch(
         "web.backend.routes.generate.get_user_from_token",
         return_value={"sub": "user-123", "email": "someone@example.com"},
     ):
-        from web.backend.app import app
-        from fastapi.testclient import TestClient
-        c = TestClient(app)
-        res = c.post(
-            "/api/generate-from-url",
-            json={"url": "https://example.com/post"},
-            headers={"Authorization": "Bearer fake-token"},
-        )
-    assert res.status_code == 403
-    assert "coming soon" in res.json()["detail"]
+        with patch("web.backend.routes.generate.get_supabase", return_value=mock_sb):
+            with patch("web.backend.routes.generate.run_pipeline"):
+                with patch("core.blogpost.extract_blogpost", return_value={"title": "Test", "text": "content " * 50, "url": "https://example.com", "word_count": 50}):
+                    from web.backend.app import app
+                    from fastapi.testclient import TestClient
+                    c = TestClient(app)
+                    res = c.post(
+                        "/api/generate-from-url",
+                        json={"url": "https://example.com/post"},
+                        headers={"Authorization": "Bearer fake-token"},
+                    )
+    assert res.status_code == 200
 
 
 def test_url_generate_rejects_invalid_url(client):
