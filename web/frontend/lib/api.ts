@@ -17,6 +17,7 @@ export interface Video {
   narration_text: string | null;
   like_count: number;
   view_count: number;
+  is_featured: boolean;
   source_url: string | null;
   sources: VideoSource[] | null;
   tags: string[] | null;
@@ -46,6 +47,7 @@ export async function fetchVideos(params?: {
   page?: number;
   limit?: number;
   tag?: string;
+  featured?: boolean;
 }): Promise<VideoListResponse> {
   const searchParams = new URLSearchParams();
   if (params?.search) searchParams.set("search", params.search);
@@ -53,6 +55,7 @@ export async function fetchVideos(params?: {
   if (params?.page) searchParams.set("page", String(params.page));
   if (params?.limit) searchParams.set("limit", String(params.limit));
   if (params?.tag) searchParams.set("tag", params.tag);
+  if (params?.featured) searchParams.set("featured", "true");
 
   const query = searchParams.toString();
   const url = `${API_URL}/api/videos${query ? `?${query}` : ""}`;

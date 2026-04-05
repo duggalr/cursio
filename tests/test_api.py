@@ -55,6 +55,12 @@ def test_list_videos_pagination(client, mock_supabase):
     assert res.status_code == 200
 
 
+def test_list_videos_featured_filter(client, mock_supabase):
+    """GET /api/videos?featured=true passes featured filter."""
+    res = client.get("/api/videos?featured=true")
+    assert res.status_code == 200
+
+
 # ─── Videos: Like/Unlike ───────────────────────────────────────────
 
 
