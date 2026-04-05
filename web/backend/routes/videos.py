@@ -41,6 +41,7 @@ async def list_videos(
     search: str | None = Query(None, description="Search videos by topic or title"),
     sort: str = Query("recent", description="Sort order: 'recent' or 'most_liked'"),
     tag: str | None = Query(None, description="Filter by tag"),
+    featured: bool = Query(False, description="Filter to featured/vetted videos only"),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Results per page"),
 ):
@@ -52,6 +53,9 @@ async def list_videos(
     query = supabase.table("videos").select(
         "*, likes(count)", count="exact"
     )
+
+    if featured:
+        query = query.eq("is_featured", True)
 
     if search:
         # Split search into words and match any word in topic or title

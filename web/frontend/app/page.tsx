@@ -64,7 +64,8 @@ export default function HomePage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const [tab, setTab] = useState<"my_videos" | "community">("community");
+  const [tab, setTab] = useState<"picks" | "my_videos" | "community">("picks");
+  const [picksTotal, setPicksTotal] = useState<number | null>(null);
   const [communitySort, setCommunitySort] = useState<"recent" | "most_liked">("recent");
   const [availableTags, setAvailableTags] = useState<TagWithCount[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>("");
@@ -187,11 +188,11 @@ export default function HomePage() {
     return () => { subscription?.unsubscribe(); };
   }, []);
 
-  // Default to "My Videos" tab once auth is resolved
+  // Default to "Curiso Picks" tab (always)
   useEffect(() => {
     if (tabInitialized) return;
     if (user) {
-      setTab("my_videos");
+      setTab("picks");
       setTabInitialized(true);
     } else if (user === null && supabaseRef.current) {
       setTabInitialized(true);
@@ -245,8 +246,9 @@ export default function HomePage() {
     try {
       const data = await fetchVideos({
         search: search || undefined,
-        sort: communitySort,
+        sort: tab === "picks" ? "most_viewed" : communitySort,
         tag: selectedTag || undefined,
+        featured: tab === "picks" ? true : undefined,
         page: pageNum,
         limit: PAGE_SIZE,
       });
@@ -255,7 +257,11 @@ export default function HomePage() {
       } else {
         setVideos(data.videos);
       }
-      setCommunityTotal(data.total);
+      if (tab === "picks") {
+        setPicksTotal(data.total);
+      } else {
+        setCommunityTotal(data.total);
+      }
       setHasMore(data.videos.length === PAGE_SIZE && (data.total > pageNum * PAGE_SIZE));
     } catch {
       if (!append) setVideos([]);
@@ -778,6 +784,26 @@ export default function HomePage() {
         >
           <div className="flex items-center justify-between">
             <div className="flex gap-1 text-sm">
+              <button
+                onClick={() => setTab("picks")}
+                className={`rounded-lg px-3 py-1.5 transition-colors ${
+                  tab === "picks"
+                    ? "bg-[var(--color-foreground)] font-medium text-[var(--color-background)]"
+                    : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                }`}
+              >
+                Curiso Picks{picksTotal !== null ? ` (${picksTotal})` : ""}
+              </button>
+              <button
+                onClick={() => setTab("community")}
+                className={`rounded-lg px-3 py-1.5 transition-colors ${
+                  tab === "community"
+                    ? "bg-[var(--color-foreground)] font-medium text-[var(--color-background)]"
+                    : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                }`}
+              >
+                Community{communityTotal !== null ? ` (${communityTotal})` : ""}
+              </button>
               {user && (
                 <button
                   onClick={() => setTab("my_videos")}
@@ -790,16 +816,6 @@ export default function HomePage() {
                   My Videos{myVideoCount !== null ? ` (${myVideoCount})` : ""}
                 </button>
               )}
-              <button
-                onClick={() => setTab("community")}
-                className={`rounded-lg px-3 py-1.5 transition-colors ${
-                  tab === "community"
-                    ? "bg-[var(--color-foreground)] font-medium text-[var(--color-background)]"
-                    : "text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-                }`}
-              >
-                Community{communityTotal !== null ? ` (${communityTotal})` : ""}
-              </button>
 
               <button
                 onClick={() => {
@@ -831,6 +847,11 @@ export default function HomePage() {
                   <option value="recent">Recent</option>
                   <option value="most_viewed">Most Viewed</option>
                 </select>
+              )}
+              {tab === "picks" && picksTotal !== null && picksTotal > 0 && (
+                <span className="text-xs text-[var(--color-muted)]">
+                  Vetted by the Curiso team
+                </span>
               )}
             </div>
           </div>
@@ -923,10 +944,10 @@ export default function HomePage() {
               {tab === "my_videos" ? (
                 <div>
                   <p className="mb-2 text-sm font-medium text-[var(--color-foreground)]">
-                    You haven't generated any videos yet.
+                    You haven&apos;t generated any videos yet.
                   </p>
                   <p className="mb-5 text-xs text-[var(--color-muted)]">
-                    Enter a topic above and create your first video. It's free and takes about 5 minutes.
+                    Enter a topic above and create your first video. It&apos;s free and takes about 5 minutes.
                   </p>
                   <button
                     onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
@@ -935,6 +956,10 @@ export default function HomePage() {
                     Generate your first video
                   </button>
                 </div>
+              ) : tab === "picks" ? (
+                <p className="text-sm text-[var(--color-muted)]">
+                  {search ? `No picks found for "${search}"` : "Curated picks coming soon!"}
+                </p>
               ) : (
                 <p className="text-sm text-[var(--color-muted)]">
                   {search ? `No videos found for "${search}"` : "No videos yet. Generate one above!"}
