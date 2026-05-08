@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { createClient } from "./supabase";
 
 export interface VideoSource {
   title: string;
@@ -41,6 +41,23 @@ export interface Job {
   updated_at: string;
 }
 
+export interface TagWithCount {
+  tag: string;
+  count: number;
+}
+
+type VideoRow = Omit<Video, "like_count"> & {
+  likes?: { count: number }[] | null;
+};
+
+function normalizeVideo(row: VideoRow): Video {
+  const likes = row.likes ?? [];
+  const like_count = likes[0]?.count ?? 0;
+  const { likes: _likes, ...rest } = row;
+  void _likes;
+  return { ...rest, like_count } as Video;
+}
+
 export async function fetchVideos(params?: {
   search?: string;
   sort?: string;
@@ -49,155 +66,179 @@ export async function fetchVideos(params?: {
   tag?: string;
   featured?: boolean;
 }): Promise<VideoListResponse> {
-  const searchParams = new URLSearchParams();
-  if (params?.search) searchParams.set("search", params.search);
-  if (params?.sort) searchParams.set("sort", params.sort);
-  if (params?.page) searchParams.set("page", String(params.page));
-  if (params?.limit) searchParams.set("limit", String(params.limit));
-  if (params?.tag) searchParams.set("tag", params.tag);
-  if (params?.featured) searchParams.set("featured", "true");
+  const supabase = createClient();
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 20;
+  const offset = (page - 1) * limit;
 
-  const query = searchParams.toString();
-  const url = `${API_URL}/api/videos${query ? `?${query}` : ""}`;
+  let query = supabase
+    .from("videos")
+    .select("*, likes(count)", { count: "exact" });
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch videos: ${res.statusText}`);
+  if (params?.featured) {
+    query = query.eq("is_featured", true);
   }
-  return res.json();
-}
 
-export interface TagWithCount {
-  tag: string;
-  count: number;
+  if (params?.search) {
+    const words = params.search.split(/\s+/).filter(Boolean);
+    if (words.length > 0) {
+      const conditions = words
+        .flatMap((w) => [`topic.ilike.%${w}%`, `title.ilike.%${w}%`])
+        .join(",");
+      query = query.or(conditions);
+    }
+  }
+
+  if (params?.tag) {
+    query = query.contains("tags", [params.tag]);
+  }
+
+  const sort = params?.sort ?? "recent";
+  if (sort === "most_liked") {
+    query = query.order("like_count", { ascending: false });
+  } else if (sort === "most_viewed") {
+    query = query.order("view_count", { ascending: false });
+  } else {
+    query = query.order("created_at", { ascending: false });
+  }
+
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, count, error } = await query;
+  if (error) throw new Error(`Failed to fetch videos: ${error.message}`);
+
+  const videos = (data ?? []).map((row: unknown) => normalizeVideo(row as VideoRow));
+  return { videos, total: count ?? videos.length, page, limit };
 }
 
 export async function fetchTags(): Promise<TagWithCount[]> {
-  const res = await fetch(`${API_URL}/api/tags`);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.tags || [];
-}
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("videos")
+    .select("tags")
+    .not("tags", "is", null);
 
-export async function fetchVideo(slug: string): Promise<Video> {
-  const res = await fetch(`${API_URL}/api/videos/${slug}`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch video: ${res.statusText}`);
+  if (error) return [];
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    const tags = (row as { tags: unknown }).tags;
+    const list = Array.isArray(tags)
+      ? tags
+      : typeof tags === "string"
+        ? safeParseStringArray(tags)
+        : [];
+    for (const tag of list) {
+      if (typeof tag === "string" && tag) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
+      }
+    }
   }
-  return res.json();
+
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
-export async function generateVideo(
-  topic: string,
-  duration: string,
-  token: string,
-  useResearch: boolean = false,
-  qualityMode: boolean = false,
-): Promise<{ job_id: string }> {
-  const res = await fetch(`${API_URL}/api/generate`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ topic, duration, use_research: useResearch, quality_mode: qualityMode }),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to generate video: ${res.statusText}`);
-  }
-  return res.json();
-}
-
-export async function fetchJobStatus(jobId: string): Promise<Job> {
-  const res = await fetch(`${API_URL}/api/jobs/${jobId}`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch job status: ${res.statusText}`);
-  }
-  return res.json();
-}
-
-export async function likeVideo(videoId: string, token: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/videos/${videoId}/like`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to like video: ${res.statusText}`);
+function safeParseStringArray(value: string): unknown[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
-export async function unlikeVideo(videoId: string, token: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/videos/${videoId}/like`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to unlike video: ${res.statusText}`);
+export async function fetchVideo(slugOrId: string): Promise<Video> {
+  const supabase = createClient();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
+  const column = isUuid ? "id" : "slug";
+
+  const { data, error } = await supabase
+    .from("videos")
+    .select("*, likes(count)")
+    .eq(column, slugOrId)
+    .single();
+
+  if (error || !data) throw new Error(`Failed to fetch video: ${error?.message ?? "not found"}`);
+  return normalizeVideo(data as VideoRow);
+}
+
+// Generation, job polling, and rate-limit endpoints used to live on the
+// FastAPI backend. The backend is currently offline, so these throw a
+// clear error if anything still calls them. The UI no longer does.
+function generationDisabled(): never {
+  throw new Error("Video generation is temporarily paused.");
+}
+
+export async function generateVideo(): Promise<{ job_id: string }> {
+  generationDisabled();
+}
+
+export async function generateFromPaper(): Promise<{ job_id: string }> {
+  generationDisabled();
+}
+
+export async function generateFromURL(): Promise<{ job_id: string }> {
+  generationDisabled();
+}
+
+export async function fetchJobStatus(): Promise<Job> {
+  generationDisabled();
+}
+
+export async function fetchActiveJob(): Promise<Job | null> {
+  return null;
+}
+
+export async function likeVideo(videoId: string): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Sign in required");
+
+  const { error } = await supabase
+    .from("likes")
+    .insert({ video_id: videoId, user_id: user.id });
+
+  // Ignore unique-constraint violation if the row already exists
+  if (error && error.code !== "23505") {
+    throw new Error(`Failed to like video: ${error.message}`);
   }
 }
 
-export async function generateFromPaper(
-  file: File,
-  duration: string,
-  token: string,
-): Promise<{ job_id: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("duration", duration);
+export async function unlikeVideo(videoId: string): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Sign in required");
 
-  const res = await fetch(`${API_URL}/api/generate-from-paper`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to upload paper: ${res.statusText}`);
-  }
-  return res.json();
+  const { error } = await supabase
+    .from("likes")
+    .delete()
+    .eq("video_id", videoId)
+    .eq("user_id", user.id);
+
+  if (error) throw new Error(`Failed to unlike video: ${error.message}`);
 }
 
-export async function generateFromURL(
-  url: string,
-  duration: string,
-  token: string,
-): Promise<{ job_id: string }> {
-  const res = await fetch(`${API_URL}/api/generate-from-url`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ url, duration }),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || `Failed to generate from URL: ${res.statusText}`);
-  }
-  return res.json();
+export async function recordView(_videoId: string): Promise<void> {
+  // View count increments are intentionally a no-op while the backend
+  // is offline. Add a Postgres RPC + supabase.rpc(...) call here if we
+  // want to track views again.
+  void _videoId;
 }
 
-export async function fetchActiveJob(token: string): Promise<Job | null> {
-  const res = await fetch(`${API_URL}/api/jobs/active/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data || null;
-}
+export async function checkIfLiked(videoId: string): Promise<boolean> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
 
-export async function recordView(videoId: string): Promise<void> {
-  await fetch(`${API_URL}/api/videos/${videoId}/view`, { method: "POST" }).catch(() => {});
-}
+  const { data, error } = await supabase
+    .from("likes")
+    .select("id")
+    .eq("video_id", videoId)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-export async function checkIfLiked(videoId: string, token: string): Promise<boolean> {
-  const res = await fetch(`${API_URL}/api/videos/${videoId}/like`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return false;
-  const data = await res.json();
-  return data.liked;
+  if (error) return false;
+  return !!data;
 }

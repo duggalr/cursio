@@ -38,13 +38,8 @@ export default function VideoPage() {
         setLikeCount(data.like_count || 0);
         recordView(data.id);
 
-        const { createClient } = await import("@/lib/supabase");
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          const isLiked = await checkIfLiked(data.id, session.access_token);
-          setLiked(isLiked);
-        }
+        const isLiked = await checkIfLiked(data.id);
+        setLiked(isLiked);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load video");
       } finally {
@@ -58,9 +53,9 @@ export default function VideoPage() {
     if (!video) return;
     const { createClient } = await import("@/lib/supabase");
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!session?.access_token) {
+    if (!user) {
       setAuthModal(true);
       return;
     }
@@ -68,11 +63,11 @@ export default function VideoPage() {
     setLikeLoading(true);
     try {
       if (liked) {
-        await unlikeVideo(video.id, session.access_token);
+        await unlikeVideo(video.id);
         setLiked(false);
         setLikeCount((c) => Math.max(0, c - 1));
       } else {
-        await likeVideo(video.id, session.access_token);
+        await likeVideo(video.id);
         setLiked(true);
         setLikeCount((c) => c + 1);
       }
